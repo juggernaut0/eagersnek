@@ -1,0 +1,89 @@
+import foo.bar
+
+# fold: (a -> b -> a) -> a -> [b] -> a
+let fold = { folder state list ->
+	match list [
+		{ [] -> state }
+		{ (:: h t) -> (fold folder (folder state h) t) }
+	]
+}
+let sum = (fold 0 +)
+
+# flip: (b -> a -> c) -> a -> b -> c
+let flip = { f a b -> (f b a) }
+
+let reverse = (fold (flip ::) [])
+
+let foldr = { folder state list -> (fold folder state (reverse list)) }
+
+let thenConsume = { mapper list ->
+	(foldr { acc x -> (:: (mapper x) acc) } [] list)
+}
+
+let id = { x -> x }
+let >> = { f g x -> (g (f x)) }
+
+# simple type with params
+type Pair a b
+let fst be { (Pair a b) -> a }
+
+# Union type: no type params, but = and subtypes
+type Bool = True | False  # really this would be builtin
+type Option = Some x | None
+
+# unfold = (b -> (Pair a b) Option) -> b -> a List
+let unfold = { unfolder init -> 
+	let loop = { state acc ->
+		(match (unfolder state) [
+			{ None -> acc }
+			{ Some (Pair a b) -> (loop b (:: a acc)) }
+		])
+	}
+	(loop init [])
+}
+
+let range = { n ->
+	(unfold { state ->
+		(match (== state n) [
+			{ True -> None }
+			{ False -> (Pair n (+ n 1)) }
+		])
+	} 0)
+}
+
+let if = { cond then else ->
+	(match cond [
+		{ True -> (then) }
+		{ False -> (else) }
+	])
+}
+
+# type with a block creates a namespace with the same name
+type Seq state headf tailf {
+	let Simple = { init succ ->
+		let hf = id
+		let tf = { s -> (Seq (succ s) hf tf) }
+		(Seq init hf tf)
+	}
+
+	let head = { (Seq s hf tf) -> (hf s) }
+	let tail = { (Seq s hf tf) -> (tf s) }
+
+	let thenConsume = { mapper (Seq s hf tf) -> (Seq s (hf >> mapper) tf) }
+
+	let take = { n seq ->
+		(unfold { (Pair i s) ->
+			(if (== 0 i)
+				{ -> (None) }
+				{ -> (Some (Pair (Seq.head s) (Pair (- i 1) (Seq.tail s)))) }
+			)
+		} (Pair n seq))
+	}
+}
+
+let fib = (Seq.thenConsume fst
+	(Seq.Simple (Pair 1 1) { (Pair a b) -> (Pair b (+ a b)) })
+)
+
+let first10fib = (Seq.take 10 fib)
+(println first10fib)
