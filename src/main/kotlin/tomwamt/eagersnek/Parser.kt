@@ -3,10 +3,14 @@ package tomwamt.eagersnek
 abstract class Parser<out T> {
     abstract fun parse(tokens: Sequence<Token>): T
 
-    protected fun expectOrThrow(type: TokenType, tokens: Sequence<Token>): SeqResult<String> {
+    protected fun expect(type: TokenType, tokens: Sequence<Token>): SeqResult<String>? {
         val t = tokens.first()
-        val v = if (t.type == type) t.value else throw ParseException("Expected a $type; got $t")
-        return SeqResult(v, tokens.drop(1))
+        if (t.type != type) return null
+        return SeqResult(t.value, tokens.drop(1))
+    }
+
+    protected fun expectOrThrow(type: TokenType, tokens: Sequence<Token>): SeqResult<String> {
+        return expect(type, tokens) ?: throw ParseException("Expected a $type; got ${tokens.first().value}")
     }
 
     protected fun match(type: TokenType, value: String, tokens: Sequence<Token>): Sequence<Token>? {

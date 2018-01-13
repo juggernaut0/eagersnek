@@ -4,7 +4,7 @@ qualified_ident = IDENT ('.' IDENT)*
 decl = namespace | type | binding
 namespace = 'namespace' qualified_ident decl_block
 decl_block = '{' decl* '}'
-type = 'type' qualified_ident IDENT* ('=' type_cases | decl_block)?
+type = 'type' qualified_ident IDENT* ('=' type_cases)? decl_block?
 type_cases = IDENT+ ('|' IDENT+)*
 binding = 'let' pattern '=' block
 

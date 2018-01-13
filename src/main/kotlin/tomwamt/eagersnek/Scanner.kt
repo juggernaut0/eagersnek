@@ -22,7 +22,7 @@ object Scanner {
                 TokenType.IGNORE to Regex("#.*?(?=\\n|\$)"),
                 TokenType.NUMBER to Regex("\\d+(\\.\\d*)?"),
                 TokenType.STRING to Regex("""'[^\n\r]*?'|"[^\n\r]*?""""),
-                TokenType.KEYWORD to Keywords.values().joinToString("|") { it.kw }.toRegex(),
+                TokenType.KEYWORD to Keyword.values().joinToString("|") { it.kw }.toRegex(),
                 TokenType.SYMBOL to symbols.joinToString("|") { Regex.escape(it) }.toRegex(),
                 TokenType.IDENT to Regex("[^()\\[\\].\\n\\r\\s]+"),
                 TokenType.IGNORE to Regex("[ \t\r]+"),
