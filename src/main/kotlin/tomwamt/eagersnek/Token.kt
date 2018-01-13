@@ -15,9 +15,9 @@ enum class TokenType {
     SYMBOL
 }
 
-enum class Keyword(val kw: String = toString().toLowerCase()) {
-    IMPORT,
-    NAMESPACE,
-    TYPE,
-    LET
+enum class Keyword(val kw: String) {
+    IMPORT("import"),
+    NAMESPACE("namespace"),
+    TYPE("type"),
+    LET("let")
 }

@@ -2,10 +2,10 @@ import foo.bar
 
 # fold: (a -> b -> a) -> a -> [b] -> a
 let fold = { folder state list ->
-	match list [
+	(match list [
 		{ [] -> state }
 		{ (:: h t) -> (fold folder (folder state h) t) }
-	]
+	])
 }
 let sum = (fold 0 +)
 
@@ -16,7 +16,7 @@ let reverse = (fold (flip ::) [])
 
 let foldr = { folder state list -> (fold folder state (reverse list)) }
 
-let thenConsume = { mapper list ->
+let map = { mapper list ->
 	(foldr { acc x -> (:: (mapper x) acc) } [] list)
 }
 
@@ -25,7 +25,7 @@ let >> = { f g x -> (g (f x)) }
 
 # simple type with params
 type Pair a b
-let fst be { (Pair a b) -> a }
+let fst = { (Pair a b) -> a }
 
 # Union type: no type params, but = and subtypes
 type Bool = True | False  # really this would be builtin
@@ -69,7 +69,7 @@ type Seq state headf tailf {
 	let head = { (Seq s hf tf) -> (hf s) }
 	let tail = { (Seq s hf tf) -> (tf s) }
 
-	let thenConsume = { mapper (Seq s hf tf) -> (Seq s (hf >> mapper) tf) }
+	let map = { mapper (Seq s hf tf) -> (Seq s (hf >> mapper) tf) }
 
 	let take = { n seq ->
 		(unfold { (Pair i s) ->
@@ -81,7 +81,7 @@ type Seq state headf tailf {
 	}
 }
 
-let fib = (Seq.thenConsume fst
+let fib = (Seq.map fst
 	(Seq.Simple (Pair 1 1) { (Pair a b) -> (Pair b (+ a b)) })
 )
 

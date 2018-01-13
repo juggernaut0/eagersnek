@@ -1,14 +1,14 @@
 package tomwamt.eagersnek
 
-data class SeqResult<out T>(val result: T, val seq: Sequence<Token>) {
-    inline fun <U> flatMap(seqMap: (Sequence<Token>) -> SeqResult<U>) = flatMap({ a, b -> a to b }, seqMap)
+data class SeqResult<out T>(val result: T, val seq: Seq<Token>) {
+    inline fun <U> flatMap(seqMap: (Seq<Token>) -> SeqResult<U>) = flatMap({ a, b -> a to b }, seqMap)
 
-    inline fun <U, V> flatMap(resultMap: (T, U) -> V, seqMap: (Sequence<Token>) -> SeqResult<U>): SeqResult<V> {
+    inline fun <U, V> flatMap(resultMap: (T, U) -> V, seqMap: (Seq<Token>) -> SeqResult<U>): SeqResult<V> {
         val (res2, seq2) = seqMap(seq)
         return SeqResult(resultMap(result, res2), seq2)
     }
 
-    inline fun thenConsume(block: (Sequence<Token>) -> Sequence<Token>): SeqResult<T> {
+    inline fun thenConsume(block: (Seq<Token>) -> Seq<Token>): SeqResult<T> {
         val seq2 = block(seq)
         return SeqResult(result, seq2)
     }

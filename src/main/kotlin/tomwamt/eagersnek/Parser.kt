@@ -1,39 +1,49 @@
 package tomwamt.eagersnek
 
 abstract class Parser<out T> {
-    abstract fun parse(tokens: Sequence<Token>): T
+    abstract fun parse(tokens: Seq<Token>): T
 
-    protected fun expect(type: TokenType, tokens: Sequence<Token>): SeqResult<String>? {
-        val t = tokens.first()
+    protected inline fun <T> Seq<Token>.require(expected: String, block: (Seq<Token>) -> SeqResult<T>?): SeqResult<T> {
+        return block(this) ?: parseError(expected, head())
+    }
+
+    protected fun Seq<Token>.expect(type: TokenType): SeqResult<String>? {
+        if (empty) return null
+        val t = head()
         if (t.type != type) return null
-        return SeqResult(t.value, tokens.drop(1))
+        return SeqResult(t.value, tail())
     }
 
-    protected fun expectOrThrow(type: TokenType, tokens: Sequence<Token>): SeqResult<String> {
-        return expect(type, tokens) ?: throw ParseException("Expected a $type; got ${tokens.first().value}")
+    protected fun Seq<Token>.expectOrThrow(type: TokenType): SeqResult<String> {
+        return expect(type) ?: parseError(type.toString(), head())
     }
 
-    protected fun match(type: TokenType, value: String, tokens: Sequence<Token>): Sequence<Token>? {
-        val t = tokens.first()
-        if (t.matches(type, value)) return tokens.drop(1)
+    protected fun Seq<Token>.match(type: TokenType, value: String): Seq<Token>? {
+        if (empty) return null
+        val t = head()
+        if (t.matches(type, value)) return tail()
         return null
     }
 
-    protected fun matchOrThrow(type: TokenType, value: String, tokens: Sequence<Token>): Sequence<Token> {
-        return match(type, value, tokens) ?: throw ParseException("Expected $value; got ${tokens.first().value}")
+    protected fun Seq<Token>.matchOrThrow(type: TokenType, value: String): Seq<Token> {
+        return match(type, value) ?: parseError(value, head())
     }
 
-    protected inline fun <T> parseStar(tokens: Sequence<Token>, block: (Sequence<Token>) -> SeqResult<T>?) =
-            parseStarInto(mutableListOf(), tokens, block)
+    protected inline fun <T> Seq<Token>.star(block: (Seq<Token>) -> SeqResult<T>?) =
+            starInto(mutableListOf(), block)
 
-    protected inline fun <T> parseStarInto(list: MutableList<T>, tokens: Sequence<Token>, block: (Sequence<Token>) -> SeqResult<T>?): SeqResult<List<T>> {
-        var t = tokens
-        while(true) {
+    protected inline fun <T> Seq<Token>.starInto(list: MutableList<T>, block: (Seq<Token>) -> SeqResult<T>?): SeqResult<List<T>> {
+        var t = this
+        while(!t.empty) {
             val res = block(t) ?: break
             list.add(res.result)
             t = res.seq
         }
 
         return SeqResult(list, t)
+    }
+
+    protected fun <T> parseError(expected: String, actual: Token): T {
+        throw ParseException("Expected $expected, got ${actual.type}(${actual.value}) at line ${actual.line}")
     }
 }

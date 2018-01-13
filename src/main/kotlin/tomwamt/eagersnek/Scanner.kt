@@ -5,6 +5,7 @@ object Scanner {
 
     init {
         val symbols = listOf(
+                "|",
                 ".",
                 "{",
                 "}",
@@ -14,7 +15,6 @@ object Scanner {
                 "[]",
                 "[",
                 "]",
-                "=",
                 "->"
         )
 
@@ -23,6 +23,7 @@ object Scanner {
                 TokenType.NUMBER to Regex("\\d+(\\.\\d*)?"),
                 TokenType.STRING to Regex("""'[^\n\r]*?'|"[^\n\r]*?""""),
                 TokenType.KEYWORD to Keyword.values().joinToString("|") { it.kw }.toRegex(),
+                TokenType.SYMBOL to Regex("=(?!=)"),
                 TokenType.SYMBOL to symbols.joinToString("|") { Regex.escape(it) }.toRegex(),
                 TokenType.IDENT to Regex("[^()\\[\\].\\n\\r\\s]+"),
                 TokenType.IGNORE to Regex("[ \t\r]+"),
@@ -30,9 +31,15 @@ object Scanner {
         )
     }
 
-    fun scan(code: String): Sequence<Token> =
+    /*fun scan(code: String): Seq<Token> =
             generateSequence(token(code,0, 1)) { token(code, it.start + it.value.length, it.line) }
-                    .filterNot { it.type == TokenType.NEWLINE || it.type == TokenType.IGNORE }
+                    .filterNot { it.type == TokenType.NEWLINE || it.type == TokenType.IGNORE }*/
+
+    fun scan(code: String): Seq<Token> {
+        val firstToken = token(code, 0, 1) ?: throw ParseException("Unable to scan")
+        val state = Seq.SeqState(firstToken, { it }, { token(code, it.start + it.value.length, it.line) })
+        return state.toSeq().filter { it.type != TokenType.NEWLINE && it.type != TokenType.IGNORE }
+    }
 
     private fun token(code: String, start: Int, currentLine: Int): Token? {
         for ((name, re) in patterns) {
