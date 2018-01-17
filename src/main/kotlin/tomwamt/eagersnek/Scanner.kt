@@ -31,12 +31,8 @@ object Scanner {
         )
     }
 
-    /*fun scan(code: String): Seq<Token> =
-            generateSequence(token(code,0, 1)) { token(code, it.start + it.value.length, it.line) }
-                    .filterNot { it.type == TokenType.NEWLINE || it.type == TokenType.IGNORE }*/
-
     fun scan(code: String): Seq<Token> {
-        val firstToken = token(code, 0, 1) ?: throw ParseException("Unable to scan")
+        val firstToken = token(code, 0, 1) ?: return Seq.empty()
         val state = Seq.SeqState(firstToken, { it }, { token(code, it.start + it.value.length, it.line) })
         return state.toSeq().filter { it.type != TokenType.NEWLINE && it.type != TokenType.IGNORE }
     }

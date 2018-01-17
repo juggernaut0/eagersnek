@@ -3,7 +3,7 @@ package tomwamt.eagersnek
 abstract class Parser<out T> {
     abstract fun parse(tokens: Seq<Token>): T
 
-    protected inline fun <T> Seq<Token>.require(expected: String, block: (Seq<Token>) -> SeqResult<T>?): SeqResult<T> {
+    protected inline fun <T> Seq<Token>.require(expected: String, block: Seq<Token>.() -> SeqResult<T>?): SeqResult<T> {
         return block(this) ?: parseError(expected, head())
     }
 
@@ -29,7 +29,7 @@ abstract class Parser<out T> {
         return match(type, value) ?: parseError(value, head())
     }
 
-    protected inline fun <T> Seq<Token>.star(block: (Seq<Token>) -> SeqResult<T>?) =
+    protected inline fun <T> Seq<Token>.star(block: Seq<Token>.() -> SeqResult<T>?) =
             starInto(mutableListOf(), block)
 
     protected inline fun <T> Seq<Token>.starInto(list: MutableList<T>, block: (Seq<Token>) -> SeqResult<T>?): SeqResult<List<T>> {
@@ -41,6 +41,10 @@ abstract class Parser<out T> {
         }
 
         return SeqResult(list, t)
+    }
+
+    protected inline fun <T> Seq<Token>.maybe(block: Seq<Token>.() -> SeqResult<T>?): SeqResult<T?> {
+        return block() ?: SeqResult(null, this)
     }
 
     protected fun <T> parseError(expected: String, actual: Token): T {
