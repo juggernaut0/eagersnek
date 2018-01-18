@@ -158,9 +158,9 @@ object ASTParser : Parser<AST>() {
     }
 
     private fun Seq<Token>.constLiteral(): SeqResult<ConstLiteral>? {
-        return expect(TokenType.NUMBER)?.map { ConstLiteral("number", it) }
-                ?: expect(TokenType.STRING)?.map { ConstLiteral("string", it) }
-                ?: match(TokenType.SYMBOL, "()")?.let { SeqResult(ConstLiteral("unit", "()"), it) }
-                ?: match(TokenType.SYMBOL, "[]")?.let { SeqResult(ConstLiteral("emptylist", "[]"), it) }
+        return expect(TokenType.NUMBER)?.map { ConstLiteral(ConstType.NUMBER, it) }
+                ?: expect(TokenType.STRING)?.map { ConstLiteral(ConstType.STRING, it) }
+                ?: match(TokenType.SYMBOL, "()")?.let { SeqResult(ConstLiteral(ConstType.UNIT, "()"), it) }
+                ?: match(TokenType.SYMBOL, "[]")?.let { SeqResult(ConstLiteral(ConstType.EMPTY_LIST, "[]"), it) }
     }
 }

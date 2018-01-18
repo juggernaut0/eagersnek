@@ -32,9 +32,10 @@ interface Expr
 class CallExpr(val callable: Expr, val args: List<Expr>) : Expr
 class LambdaExpr(val params: List<Pattern>, val block: Block) : Expr
 class ListExpr(val elements: List<Block>) : Expr
-class ConstLiteral(val type: String, val value: String) : Expr {
+class ConstLiteral(val type: ConstType, val value: String) : Expr {
     override fun toString(): String = value
 }
+enum class ConstType { NUMBER, STRING, EMPTY_LIST, UNIT }
 class QualifiedName(val parts: List<String>) : Expr {
     override fun toString(): String = parts.joinToString(".")
 }
