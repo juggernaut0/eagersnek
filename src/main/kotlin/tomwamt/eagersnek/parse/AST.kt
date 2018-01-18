@@ -6,7 +6,7 @@ class ImportStmt(val name: QualifiedName) {
 }
 interface Decl
 class Namespace(val name: QualifiedName, val decls: List<Decl>) : Decl
-class TypeDecl(val name: QualifiedName, val params: List<String>, val cases: List<TypeCase>, val namespace: Namespace?) : Decl {
+class TypeDecl(val name: QualifiedName, val cases: List<TypeCase>, val namespace: Namespace?) : Decl {
     override fun toString(): String = "type $name ..."
 }
 class TypeCase(val name: String, val params: List<String>) {

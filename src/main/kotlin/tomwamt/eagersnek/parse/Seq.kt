@@ -1,4 +1,4 @@
-package tomwamt.eagersnek
+package tomwamt.eagersnek.parse
 
 interface Seq<T> {
     class SeqState<TOut, TState>(private val state: TState, private val hf: (TState) -> TOut, private val tf: (TState) -> TState?) {

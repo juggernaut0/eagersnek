@@ -1,4 +1,4 @@
-package tomwamt.eagersnek
+package tomwamt.eagersnek.parse
 
 object Scanner {
     private val patterns: List<Pair<TokenType, Regex>>
@@ -32,7 +32,8 @@ object Scanner {
     }
 
     fun scan(code: String): Seq<Token> {
-        val firstToken = token(code, 0, 1) ?: return Seq.empty()
+        val firstToken = token(code, 0, 1)
+                ?: return Seq.empty()
         val state = Seq.SeqState(firstToken, { it }, { token(code, it.start + it.value.length, it.line) })
         return state.toSeq().filter { it.type != TokenType.NEWLINE && it.type != TokenType.IGNORE }
     }

@@ -1,5 +1,7 @@
 package tomwamt.eagersnek
 
+import tomwamt.eagersnek.parse.ASTParser
+import tomwamt.eagersnek.parse.Scanner
 import java.nio.file.Files
 import java.nio.file.Paths
 

@@ -1,4 +1,4 @@
-package tomwamt.eagersnek
+package tomwamt.eagersnek.parse
 
 abstract class Parser<out T> {
     abstract fun parse(tokens: Seq<Token>): T

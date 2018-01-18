@@ -1,7 +1,7 @@
-package tomwamt.eagersnek
+package tomwamt.eagersnek.parse
 
 data class SeqResult<out T>(val result: T, val seq: Seq<Token>) {
-    inline fun <U> thenParse(seqMap: Seq<Token>.() -> SeqResult<U>): SeqResult<Pair<T, U>> {
+    inline fun <U> then(seqMap: Seq<Token>.() -> SeqResult<U>): SeqResult<Pair<T, U>> {
         val (res2, seq2) = seqMap(seq)
         return SeqResult(result to res2, seq2)
     }

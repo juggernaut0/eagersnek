@@ -1,4 +1,4 @@
-package tomwamt.eagersnek
+package tomwamt.eagersnek.parse
 
 data class Token(val type: TokenType, val value: String, val line: Int, val start: Int) {
     fun matches(type: TokenType, value: String) = type == this.type && value == this.value

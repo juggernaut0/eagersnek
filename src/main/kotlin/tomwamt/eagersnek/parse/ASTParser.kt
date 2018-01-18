@@ -1,6 +1,4 @@
-package tomwamt.eagersnek
-
-import tomwamt.eagersnek.parse.*
+package tomwamt.eagersnek.parse
 
 object ASTParser : Parser<AST>() {
     override fun parse(tokens: Seq<Token>): AST {
@@ -21,7 +19,7 @@ object ASTParser : Parser<AST>() {
 
     private fun Seq<Token>.qualName(): SeqResult<QualifiedName>? {
         return (expect(TokenType.IDENT) ?: return null)
-                .thenParse {
+                .then {
                     star {
                         match(TokenType.SYMBOL, ".")?.expectOrThrow(TokenType.IDENT)
                     }
@@ -50,25 +48,23 @@ object ASTParser : Parser<AST>() {
     }
 
     private fun Seq<Token>.type(): SeqResult<TypeDecl>? {
-        val name = match(TokenType.KEYWORD, Keyword.TYPE.kw)
-                ?.require("qualified name") { qualName() }
-                ?: return null
-        val params = name.seq.star { expect(TokenType.IDENT) }
-        val cases = params.seq
-                .match(TokenType.SYMBOL, "=")
-                ?.typeCases()
-                ?: SeqResult(emptyList(), params.seq)
+        val name = (match(TokenType.KEYWORD, Keyword.TYPE.kw) ?: return null)
+                .require("qualified name") { qualName() }
+
+        val cases = name.seq
+                .matchOrThrow(TokenType.SYMBOL, "=")
+                .typeCases()
 
         val namespace = cases.seq.maybe { declBlock(name.result) }
 
         return SeqResult(
-                TypeDecl(name.result, params.result, cases.result, namespace.result),
+                TypeDecl(name.result, cases.result, namespace.result),
                 namespace.seq)
     }
 
     private fun Seq<Token>.typeCases(): SeqResult<List<TypeCase>> {
         return typeCase()
-                .thenParse {
+                .then {
                     star {
                         match(TokenType.SYMBOL, "|")?.typeCase()
                     }
@@ -78,7 +74,7 @@ object ASTParser : Parser<AST>() {
 
     private fun Seq<Token>.typeCase(): SeqResult<TypeCase> {
         return expectOrThrow(TokenType.IDENT)
-                .thenParse {
+                .then {
                     star { expect(TokenType.IDENT) }
                 }
                 .map { (name, params) -> TypeCase(name, params) }
@@ -88,7 +84,7 @@ object ASTParser : Parser<AST>() {
         return match(TokenType.KEYWORD, Keyword.LET.kw)
                 ?.require("pattern") { pattern() }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "=") }
-                ?.thenParse { require("block") { block() } }
+                ?.then { require("block") { block() } }
                 ?.map { (pattern, block) -> Binding(pattern, block) }
     }
 
@@ -96,7 +92,7 @@ object ASTParser : Parser<AST>() {
         return match(TokenType.IDENT, "_")?.let { SeqResult(WildcardPattern(), it) }
                 ?: expect(TokenType.IDENT)?.map { NamePattern(it) }
                 ?: listPattern()
-                ?: funcPattern()
+                ?: typePattern()
                 ?: constPattern()
     }
 
@@ -107,10 +103,10 @@ object ASTParser : Parser<AST>() {
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "]") }
     }
 
-    private fun Seq<Token>.funcPattern(): SeqResult<FuncPattern>? {
+    private fun Seq<Token>.typePattern(): SeqResult<FuncPattern>? {
         return match(TokenType.SYMBOL, "(")
                 ?.require("qualified name") { qualName() }
-                ?.thenParse { star { pattern() } }
+                ?.then { star { pattern() } }
                 ?.map { (name, params) -> FuncPattern(name, params) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
     }
@@ -122,7 +118,7 @@ object ASTParser : Parser<AST>() {
     private fun Seq<Token>.block(): SeqResult<Block>? {
         val bindings = star { binding() }
         return if (bindings.result.isNotEmpty()) {
-            bindings.thenParse { require("expr") { expr() } }
+            bindings.then { require("expr") { expr() } }
                     .map { (bindings, expr) -> Block(bindings, expr) }
         } else {
             bindings.seq.expr()?.map { Block(emptyList(), it) }
@@ -140,7 +136,7 @@ object ASTParser : Parser<AST>() {
     private fun Seq<Token>.callExpr(): SeqResult<CallExpr>? {
         return match(TokenType.SYMBOL, "(")
                 ?.require("expr") { expr() }
-                ?.thenParse { star { expr() } }
+                ?.then { star { expr() } }
                 ?.map { (callable, args) -> CallExpr(callable, args) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
     }
@@ -149,7 +145,7 @@ object ASTParser : Parser<AST>() {
         return match(TokenType.SYMBOL, "{")
                 ?.star { pattern() }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "->") }
-                ?.thenParse { require("block") { block() } }
+                ?.then { require("block") { block() } }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "}") }
                 ?.map { (patterns, block) -> LambdaExpr(patterns, block) }
     }

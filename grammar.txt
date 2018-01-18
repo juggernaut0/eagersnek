@@ -4,7 +4,7 @@ qualified_ident = IDENT ('.' IDENT)*
 decl = namespace | type | binding
 namespace = 'namespace' qualified_ident decl_block
 decl_block = '{' decl* '}'
-type = 'type' qualified_ident IDENT* ('=' type_cases)? decl_block?
+type = 'type' qualified_ident '=' type_cases decl_block?
 type_cases = IDENT+ ('|' IDENT+)*
 binding = 'let' pattern '=' block
 
@@ -12,11 +12,11 @@ pattern = const_literal |
 	wildcard_pattern |
 	name_pattern |
 	list_pattern |
-	func_pattern |
+	type_pattern |
 wildcard_pattern = '_'
 name_pattern = IDENT
 list_pattern = '[' pattern+ ']'
-func_pattern = '(' qualified_ident pattern+ ')'
+type_pattern = '(' qualified_ident pattern+ ')'
 
 block = binding* expr
 expr = call_expr | qualified_ident | lambda | list_expr | const_literal
