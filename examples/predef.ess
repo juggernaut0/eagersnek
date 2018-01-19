@@ -1,0 +1,14 @@
+type UnitT = Unit
+
+type Bool = True | False
+
+type List = :: h t | Empty {
+    let fold = { folder state list ->
+    	(match list [
+    		{ Empty -> state }
+    		{ (:: h t) -> (fold folder (folder state h) t) }
+    	])
+    }
+}
+
+let ignore = { _ -> () }

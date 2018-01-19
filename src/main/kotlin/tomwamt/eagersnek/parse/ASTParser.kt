@@ -27,21 +27,21 @@ object ASTParser : Parser<AST>() {
                 .map { (first, rest) -> QualifiedName(listOf(first, *rest.toTypedArray())) }
     }
 
-    private fun Seq<Token>.decls(name: QualifiedName): SeqResult<Namespace> {
-        return star { decl() }.map { Namespace(name, it) }
+    private fun Seq<Token>.decls(name: QualifiedName): SeqResult<NamespaceDecl> {
+        return star { decl() }.map { NamespaceDecl(name, it) }
     }
 
     private fun Seq<Token>.decl(): SeqResult<Decl>? {
         return namespace() ?: type() ?: binding()
     }
 
-    private fun Seq<Token>.declBlock(name: QualifiedName): SeqResult<Namespace>? {
+    private fun Seq<Token>.declBlock(name: QualifiedName): SeqResult<NamespaceDecl>? {
         return match(TokenType.SYMBOL, "{")
                 ?.decls(name)
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "}") }
     }
 
-    private fun Seq<Token>.namespace(): SeqResult<Namespace>? {
+    private fun Seq<Token>.namespace(): SeqResult<NamespaceDecl>? {
         return match(TokenType.KEYWORD, Keyword.NAMESPACE.kw)
                 ?.require("qualified name") { qualName() }
                 ?.let { it.seq.declBlock(it.result) }
@@ -103,11 +103,11 @@ object ASTParser : Parser<AST>() {
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "]") }
     }
 
-    private fun Seq<Token>.typePattern(): SeqResult<FuncPattern>? {
+    private fun Seq<Token>.typePattern(): SeqResult<TypePattern>? {
         return match(TokenType.SYMBOL, "(")
                 ?.require("qualified name") { qualName() }
                 ?.then { star { pattern() } }
-                ?.map { (name, params) -> FuncPattern(name, params) }
+                ?.map { (name, params) -> TypePattern(name, params) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
     }
 
