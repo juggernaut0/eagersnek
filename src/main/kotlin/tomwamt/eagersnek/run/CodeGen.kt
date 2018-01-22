@@ -3,8 +3,8 @@ package tomwamt.eagersnek.run
 import tomwamt.eagersnek.parse.*
 
 object CodeGen {
-    private inline fun withList(block: MutableList<CodeExpr>.() -> Unit): List<CodeExpr> {
-        val list = mutableListOf<CodeExpr>()
+    private inline fun withList(block: MutableList<OpCode>.() -> Unit): List<OpCode> {
+        val list = mutableListOf<OpCode>()
         list.block()
         return list
     }
@@ -18,12 +18,14 @@ object CodeGen {
     private fun genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) = withList {
         val name = parent + namespace.name.parts
         if (name.isNotEmpty()) {
-            add(MkNamespace(name))
+            add(MkNamespace(name, namespace.name.parts[0]))
         }
+        add(PushScope)
         addAll(namespace.decls.flatMap { genDecl(it, name) })
+        add(PopScope)
     }
 
-    private fun genDecl(decl: Decl, parent: List<String>): List<CodeExpr> {
+    private fun genDecl(decl: Decl, parent: List<String>): List<OpCode> {
         return when(decl) {
             is NamespaceDecl -> genNamespace(decl, parent)
             is TypeDecl -> genType(decl, parent)
@@ -42,18 +44,22 @@ object CodeGen {
         typeDecl.namespace?.let { addAll(genNamespace(it, parent)) }
     }
 
-    private fun gen(block: Block): List<CodeExpr> = withList {
-        add(PushScope)
-        for (b in block.bindings) {
-            addAll(gen(b.block))
-            addAll(savePattern(b.pattern, null))
+    private fun gen(block: Block): List<OpCode> = withList {
+        if (block.bindings.isNotEmpty()) {
+            add(PushScope)
+            for (b in block.bindings) {
+                addAll(gen(b.block))
+                addAll(savePattern(b.pattern, null))
+            }
         }
         addAll(gen(block.expr))
-        add(PopScope)
+        if (block.bindings.isNotEmpty()) {
+            add(PopScope)
+        }
     }
 
     // a value is on the stack -- save it or decompose it
-    private fun savePattern(pattern: Pattern, namespace: List<String>?): List<CodeExpr> {
+    private fun savePattern(pattern: Pattern, namespace: List<String>?): List<OpCode> {
         return when (pattern) {
             is WildcardPattern -> listOf(Pop)
             is NamePattern -> saveName(pattern, namespace)
@@ -86,7 +92,7 @@ object CodeGen {
         }
     }
 
-    private fun gen(expr: Expr): List<CodeExpr> {
+    private fun gen(expr: Expr): List<OpCode> {
         return when (expr) {
             is ConstLiteral -> listOf(genConst(expr))
             is QualifiedName -> listOf(LoadName(expr.parts))
@@ -97,7 +103,7 @@ object CodeGen {
         }
     }
 
-    private fun genConst(constLiteral: ConstLiteral): CodeExpr {
+    private fun genConst(constLiteral: ConstLiteral): OpCode {
         return when (constLiteral.type) {
             ConstType.NUMBER -> LoadNumber(constLiteral.value.toDouble())
             ConstType.STRING -> LoadString(constLiteral.value)
