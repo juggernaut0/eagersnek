@@ -10,8 +10,7 @@ class Decompose(val type: List<String>, val numParts: Int = 0) : OpCode
 class LoadName(val name: List<String>) : OpCode
 class LoadNumber(val value: Double) : OpCode
 class LoadString(val value: String) : OpCode
-class LoadCallable(val code: List<OpCode>) : OpCode
-class LoadCtor(val type: List<String>) : OpCode
+class LoadFunction(val code: List<OpCode>) : OpCode
 class SaveLocal(val name: String) : OpCode
 class SaveNamespace(val name: String, val namespace: List<String>) : OpCode
 // 1 value popped is callable, nargs popped are arguments (called with args in order of pop)

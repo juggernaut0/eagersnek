@@ -18,19 +18,22 @@ object Interpreter {
                 is LoadName -> execStack.push(findName(opcode.name))
                 is LoadNumber -> execStack.push(NumberObject(opcode.value))
                 is LoadString -> execStack.push(StringObject(opcode.value))
-                is LoadCallable -> execStack.push(FunctionObject(opcode.code, callStack.peek().scope))
+                is LoadFunction -> execStack.push(FunctionObject(opcode.code, callStack.peek().scope))
                 is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
                 is SaveNamespace -> findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> {
                     val fn = execStack.pop() as? FunctionObject ?: throw InterpreterError("not a func")
-                    callStack.push(CallFrame(fn.baseScope))
+                    callStack.push(CallFrame(Scope(fn.baseScope)))
+                    // TODO currying?
                     val res = run(fn.code)
                     callStack.pop()
                     execStack.push(res)
                 }
                 PushScope -> callStack.peek().pushScope()
                 PopScope -> callStack.peek().popScope()
-                else -> TODO("unsupported opcode")
+                is MkNamespace -> makeNamespace(opcode.name)
+                is MkType -> makeType(opcode)
+                else -> throw InterpreterError("unsupported opcode ${opcode.javaClass.name}")
             }
         }
         return execStack.pop()
@@ -74,6 +77,20 @@ object Interpreter {
                 obj.data.reversed().forEach { execStack.push(it) }
             }
         }
+    }
+
+    private fun makeNamespace(path: List<String>) {
+        var ns = rootNamespace
+        for (part in path) {
+            if (part !in ns.subnames) {
+                ns.subnames[part] = Namespace()
+            }
+            ns = ns.subnames[part]!!
+        }
+    }
+
+    private fun makeType(opcode: MkType) {
+
     }
 
     private fun findNamespace(path: List<String>): Namespace {

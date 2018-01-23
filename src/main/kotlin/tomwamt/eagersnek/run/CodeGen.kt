@@ -62,11 +62,16 @@ object CodeGen {
     private fun savePattern(pattern: Pattern, namespace: List<String>?): List<OpCode> {
         return when (pattern) {
             is WildcardPattern -> listOf(Pop)
+            is ConstPattern -> saveConst(pattern)
             is NamePattern -> saveName(pattern, namespace)
             is ListPattern -> saveList(pattern, namespace)
             is TypePattern -> saveType(pattern, namespace)
             else -> throw NotImplementedError("${pattern.javaClass.name} is not supported")
         }
+    }
+
+    private fun saveConst(pattern: ConstPattern) = withList {
+        // TODO
     }
 
     private fun saveName(pattern: NamePattern, namespace: List<String>?) = withList {
@@ -130,7 +135,7 @@ object CodeGen {
     }
 
     private fun genLambda(lambdaExpr: LambdaExpr) = withList {
-        val body = gen(lambdaExpr.block)
-        add(LoadCallable(body))
+        val body = lambdaExpr.params.flatMap { savePattern(it, null) } + gen(lambdaExpr.block)
+        add(LoadFunction(body))
     }
 }
