@@ -135,7 +135,7 @@ object ASTParser : Parser<AST>() {
 
     private fun Seq<Token>.callExpr(): SeqResult<CallExpr>? {
         return match(TokenType.SYMBOL, "(")
-                ?.require("expr") { expr() }
+                ?.require("expr or .") { match(TokenType.SYMBOL, ".")?.let { SeqResult(DotExpr, it) } ?: expr() }
                 ?.then { star { expr() } }
                 ?.map { (callable, args) -> CallExpr(callable, args) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }

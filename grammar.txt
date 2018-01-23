@@ -20,7 +20,7 @@ type_pattern = '(' qualified_ident pattern+ ')'
 
 block = binding* expr
 expr = call_expr | qualified_ident | lambda | list_expr | const_literal
-call_expr = '(' expr+ ')'
+call_expr = '(' ('.' | expr) expr* ')'
 lambda = '{' pattern* '->' block '}'
 list_expr = '[' block+ ']'
 const_literal = NUMBER | STRING | '()' | '[]'

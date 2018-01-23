@@ -1,5 +1,6 @@
 package tomwamt.eagersnek.run
 
+import tomwamt.eagersnek.except.CodeGenException
 import tomwamt.eagersnek.parse.*
 
 object CodeGen {
@@ -12,7 +13,7 @@ object CodeGen {
     fun compile(ast: AST) = withList {
         // TODO imports
         addAll(genNamespace(ast.rootNamespace))
-        ast.expr?.let { addAll(genCall(it)) }
+        ast.expr?.let { addAll(genCall(it, false)) }
     }
 
     private fun genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) = withList {
@@ -30,7 +31,7 @@ object CodeGen {
             is NamespaceDecl -> genNamespace(decl, parent)
             is TypeDecl -> genType(decl, parent)
             is Binding -> withList {
-                addAll(gen(decl.block))
+                addAll(gen(decl.block, false))
                 addAll(savePattern(decl.pattern, parent))
             }
             else -> throw NotImplementedError("${decl.javaClass.name} is not supported")
@@ -44,15 +45,15 @@ object CodeGen {
         typeDecl.namespace?.let { addAll(genNamespace(it, parent)) }
     }
 
-    private fun gen(block: Block): List<OpCode> = withList {
+    private fun gen(block: Block, allowTail: Boolean): List<OpCode> = withList {
         if (block.bindings.isNotEmpty()) {
             add(PushScope)
             for (b in block.bindings) {
-                addAll(gen(b.block))
+                addAll(gen(b.block, false))
                 addAll(savePattern(b.pattern, null))
             }
         }
-        addAll(gen(block.expr))
+        addAll(gen(block.expr, allowTail))
         if (block.bindings.isNotEmpty()) {
             add(PopScope)
         }
@@ -62,7 +63,7 @@ object CodeGen {
     private fun savePattern(pattern: Pattern, namespace: List<String>?): List<OpCode> {
         return when (pattern) {
             is WildcardPattern -> listOf(Pop)
-            is ConstPattern -> saveConst(pattern)
+            is ConstPattern -> matchConst(pattern)
             is NamePattern -> saveName(pattern, namespace)
             is ListPattern -> saveList(pattern, namespace)
             is TypePattern -> saveType(pattern, namespace)
@@ -70,8 +71,9 @@ object CodeGen {
         }
     }
 
-    private fun saveConst(pattern: ConstPattern) = withList {
-        // TODO
+    private fun matchConst(pattern: ConstPattern) = withList {
+        add(genConst(pattern.const))
+        add(Match)
     }
 
     private fun saveName(pattern: NamePattern, namespace: List<String>?) = withList {
@@ -97,12 +99,12 @@ object CodeGen {
         }
     }
 
-    private fun gen(expr: Expr): List<OpCode> {
+    private fun gen(expr: Expr, allowTail: Boolean): List<OpCode> {
         return when (expr) {
             is ConstLiteral -> listOf(genConst(expr))
             is QualifiedName -> listOf(LoadName(expr.parts))
             is ListExpr -> genList(expr)
-            is CallExpr -> genCall(expr)
+            is CallExpr -> genCall(expr, allowTail)
             is LambdaExpr -> genLambda(expr)
             else -> throw NotImplementedError("${expr.javaClass.name} is not supported")
         }
@@ -122,20 +124,25 @@ object CodeGen {
     private fun genList(listExpr: ListExpr) = withList {
         add(genEmptyList())
         for (block in listExpr.elements.reversed()) {
-            addAll(gen(block))
+            addAll(gen(block, false))
             add(LoadName(listOf("::")))
-            add(Call(2))
+            add(Call(2, false))
         }
     }
 
-    private fun genCall(callExpr: CallExpr) = withList {
-        addAll(callExpr.args.reversed().flatMap { gen(it) })
-        addAll(gen(callExpr.callable))
-        add(Call(callExpr.args.size))
+    private fun genCall(callExpr: CallExpr, allowTail: Boolean) = withList {
+        addAll(callExpr.args.reversed().flatMap { gen(it, false) })
+        if (callExpr.callable == DotExpr) {
+            if (!allowTail) throw CodeGenException("Tail call not allowed here")
+            add(Call(callExpr.args.size, true))
+        } else {
+            addAll(gen(callExpr.callable, false))
+            add(Call(callExpr.args.size, false))
+        }
     }
 
     private fun genLambda(lambdaExpr: LambdaExpr) = withList {
-        val body = lambdaExpr.params.flatMap { savePattern(it, null) } + gen(lambdaExpr.block)
+        val body = lambdaExpr.params.flatMap { savePattern(it, null) } + gen(lambdaExpr.block, true)
         add(LoadFunction(body))
     }
 }

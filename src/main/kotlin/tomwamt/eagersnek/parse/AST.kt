@@ -39,3 +39,4 @@ enum class ConstType { NUMBER, STRING, EMPTY_LIST, UNIT }
 class QualifiedName(val parts: List<String>) : Expr {
     override fun toString(): String = parts.joinToString(".")
 }
+object DotExpr : Expr
