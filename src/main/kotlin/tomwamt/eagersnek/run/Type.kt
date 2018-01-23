@@ -1,9 +1,8 @@
 package tomwamt.eagersnek.run
 
-class Type(val name: String, val fieldCount: Int) {
-    companion object {
-        val NUMBER = Type("Number", 1)
-        val STRING = Type("String", 1)
-        val CALLABLE = Type("Callable", 1)
-    }
-}
+abstract class Type(val name: String)
+object NumberType : Type("Number")
+object StringType : Type("String")
+object FunctionType : Type("Function")
+class ParentType(name: String, val cases: List<TypeCase>) : Type(name)
+class TypeCase(name: String, val fieldCount: Int) : Type(name)
