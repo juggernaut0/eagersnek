@@ -1,0 +1,11 @@
+let foo = { n ->
+    (match n [
+        { 0 -> (println "Foo") }
+        { _ ->
+            let _ = (println n)
+            (. (- n 1))
+        }
+    ])
+}
+
+(foo 5)

@@ -3,68 +3,64 @@ package tomwamt.eagersnek.code
 import tomwamt.eagersnek.parse.*
 
 object CodeGen {
-    private inline fun withList(block: MutableList<OpCode>.() -> Unit): List<OpCode> {
-        val list = mutableListOf<OpCode>()
-        list.block()
-        return list
-    }
-
     fun compile(ast: AST): CompiledCode {
-        val ops = withList {
-            // TODO imports
-            addAll(genNamespace(ast.rootNamespace))
-            ast.expr?.let { addAll(genCall(it, false)) }
-        }
-        TODO("labels")
+        val code = CompiledCode()
+
+        // TODO imports
+        code.genNamespace(ast.rootNamespace)
+        ast.expr?.let { code.genCall(it, false) }
+
+        // TODO("labels")
+        return code
     }
 
-    private fun genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) = withList {
+    private fun CompiledCode.genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) {
         val name = parent + namespace.name.parts
         if (name.isNotEmpty()) {
             add(MkNamespace(name, namespace.name.parts[0]))
         }
         add(PushScope)
-        addAll(namespace.decls.flatMap { genDecl(it, name) })
+        namespace.decls.forEach { genDecl(it, name) }
         add(PopScope)
     }
 
-    private fun genDecl(decl: Decl, parent: List<String>): List<OpCode> {
+    private fun CompiledCode.genDecl(decl: Decl, parent: List<String>) {
         return when(decl) {
             is NamespaceDecl -> genNamespace(decl, parent)
             is TypeDecl -> genType(decl, parent)
-            is Binding -> withList {
-                addAll(gen(decl.block, false))
-                addAll(savePattern(decl.pattern, parent))
+            is Binding -> {
+                gen(decl.block, false)
+                savePattern(decl.pattern, parent)
             }
             else -> throw NotImplementedError("${decl.javaClass.name} is not supported")
         }
     }
 
-    private fun genType(typeDecl: TypeDecl, parent: List<String>) = withList {
+    private fun CompiledCode.genType(typeDecl: TypeDecl, parent: List<String>) {
         val name = typeDecl.name.parts.last()
         val ns = parent + typeDecl.name.parts.run { subList(0, lastIndex) }
         add(MkType(name, ns, typeDecl.cases))
-        typeDecl.namespace?.let { addAll(genNamespace(it, parent)) }
+        typeDecl.namespace?.let { genNamespace(it, parent) }
     }
 
-    private fun gen(block: Block, allowTail: Boolean): List<OpCode> = withList {
+    private fun CompiledCode.gen(block: Block, allowTail: Boolean) {
         if (block.bindings.isNotEmpty()) {
             add(PushScope)
             for (b in block.bindings) {
-                addAll(gen(b.block, false))
-                addAll(savePattern(b.pattern, null))
+                gen(b.block, false)
+                savePattern(b.pattern, null)
             }
         }
-        addAll(gen(block.expr, allowTail))
+        gen(block.expr, allowTail)
         if (block.bindings.isNotEmpty()) {
             add(PopScope)
         }
     }
 
     // a value is on the stack -- save it or decompose it
-    private fun savePattern(pattern: Pattern, namespace: List<String>?): List<OpCode> {
+    private fun CompiledCode.savePattern(pattern: Pattern, namespace: List<String>?) {
         return when (pattern) {
-            is WildcardPattern -> listOf(Pop)
+            is WildcardPattern -> add(Pop)
             is ConstPattern -> matchConst(pattern)
             is NamePattern -> saveName(pattern, namespace)
             is ListPattern -> saveList(pattern, namespace)
@@ -73,12 +69,11 @@ object CodeGen {
         }
     }
 
-    private fun matchConst(pattern: ConstPattern) = withList {
-        add(genConst(pattern.const))
-        add(Match)
+    private fun CompiledCode.matchConst(pattern: ConstPattern) {
+        add(Match(pattern))
     }
 
-    private fun saveName(pattern: NamePattern, namespace: List<String>?) = withList {
+    private fun CompiledCode.saveName(pattern: NamePattern, namespace: List<String>?) {
         if (namespace != null) {
             add(Duplicate)
             add(SaveNamespace(pattern.value, namespace))
@@ -86,25 +81,25 @@ object CodeGen {
         add(SaveLocal(pattern.value))
     }
 
-    private fun saveList(pattern: ListPattern, namespace: List<String>?) = withList {
+    private fun CompiledCode.saveList(pattern: ListPattern, namespace: List<String>?) {
         for (p in pattern.inners) {
             add(Decompose(listOf("::"), 2))
-            addAll(savePattern(p, namespace))
+            savePattern(p, namespace)
         }
         add(Decompose(listOf("Empty")))
     }
 
-    private fun saveType(pattern: TypePattern, namespace: List<String>?) = withList {
+    private fun CompiledCode.saveType(pattern: TypePattern, namespace: List<String>?) {
         add(Decompose(pattern.name.parts, pattern.params.size))
         for (p in pattern.params) {
-            addAll(savePattern(p, namespace))
+            savePattern(p, namespace)
         }
     }
 
-    private fun gen(expr: Expr, allowTail: Boolean): List<OpCode> {
-        return when (expr) {
-            is ConstLiteral -> listOf(genConst(expr))
-            is QualifiedName -> listOf(LoadName(expr.parts))
+    private fun CompiledCode.gen(expr: Expr, allowTail: Boolean) {
+        when (expr) {
+            is ConstLiteral -> genConst(expr)
+            is QualifiedName -> add(LoadName(expr.parts))
             is ListExpr -> genList(expr)
             is CallExpr -> genCall(expr, allowTail)
             is LambdaExpr -> genLambda(expr)
@@ -112,39 +107,77 @@ object CodeGen {
         }
     }
 
-    private fun genConst(constLiteral: ConstLiteral): OpCode {
-        return when (constLiteral.type) {
-            ConstType.NUMBER -> LoadNumber(constLiteral.value.toDouble())
-            ConstType.STRING -> LoadString(constLiteral.value)
-            ConstType.UNIT -> LoadName(listOf("Unit"))
+    private fun CompiledCode.genConst(constLiteral: ConstLiteral) {
+        when (constLiteral.type) {
+            ConstType.NUMBER -> add(LoadNumber(constLiteral.value.toDouble()))
+            ConstType.STRING -> add(LoadString(constLiteral.value))
+            ConstType.UNIT -> add(LoadName(listOf("Unit")))
             ConstType.EMPTY_LIST -> genEmptyList()
         }
     }
 
-    private fun genEmptyList() = LoadName(listOf("Empty"))
+    private fun CompiledCode.genEmptyList() = add(LoadName(listOf("Empty")))
 
-    private fun genList(listExpr: ListExpr) = withList {
-        add(genEmptyList())
+    private fun CompiledCode.genList(listExpr: ListExpr) {
+        genEmptyList()
         for (block in listExpr.elements.reversed()) {
-            addAll(gen(block, false))
+            gen(block, false)
             add(LoadName(listOf("::")))
-            add(Call(2, false))
+            add(Call(2))
         }
     }
 
-    private fun genCall(callExpr: CallExpr, allowTail: Boolean) = withList {
-        addAll(callExpr.args.reversed().flatMap { gen(it, false) })
-        if (callExpr.callable == DotExpr) {
-            if (!allowTail) throw CodeGenException("Tail call not allowed here")
-            add(Call(callExpr.args.size, true))
+    private fun CompiledCode.genCall(callExpr: CallExpr, allowTail: Boolean) {
+        if (with(callExpr.callable) { this is QualifiedName && parts.size == 1 && parts[0] == "match" }) {
+            genMatch(callExpr, allowTail)
         } else {
-            addAll(gen(callExpr.callable, false))
-            add(Call(callExpr.args.size, false))
+            callExpr.args.reversed().forEach { gen(it, false) }
+            if (callExpr.callable == DotExpr) {
+                if (!allowTail) throw CodeGenException("Tail call not allowed here")
+                add(TailCall(callExpr.args.size))
+            } else {
+                gen(callExpr.callable, false)
+                add(Call(callExpr.args.size))
+            }
         }
     }
 
-    private fun genLambda(lambdaExpr: LambdaExpr) = withList {
-        val body = lambdaExpr.params.flatMap { savePattern(it, null) } + gen(lambdaExpr.block, true)
-        add(LoadFunction(body, lambdaExpr.params.size))
+    private fun CompiledCode.genLambda(lambdaExpr: LambdaExpr) {
+        val code = CompiledCode()
+        lambdaExpr.params.forEach { code.savePattern(it, null) }
+        code.gen(lambdaExpr.block, true)
+
+        add(LoadFunction(code, lambdaExpr.params.size))
+    }
+
+    private fun CompiledCode.genMatch(callExpr: CallExpr, allowTail: Boolean) {
+        if (callExpr.args.size != 2) throw CodeGenException("Incorrect number of args in match: ${callExpr.args.size}")
+
+        gen(callExpr.args[0], false)
+
+        val cases = (callExpr.args[1] as? ListExpr ?: throw CodeGenException("match requires a list as second argument"))
+                .elements
+                .map { it.expr as? LambdaExpr ?: throw CodeGenException("every case in a match must be a lambda") }
+
+        cases.find { it.params.size != 1 }?.let { throw CodeGenException("every case in a match must have exactly one parameter") }
+
+        val labels = cases.map { Label(it.params[0].toString()) }
+
+        cases.zip(labels).forEach { (case, label) ->
+            add(Duplicate)
+            add(JumpIfMatch(case.params[0], label))
+        }
+        add(Fail("no match"))
+
+        val endLabel = Label("end")
+        cases.zip(labels).forEach { (case, label) -> genMatchCase(case, label, endLabel, allowTail) }
+        addLabel(endLabel)
+        add(NoOp)
+    }
+
+    private fun CompiledCode.genMatchCase(caseExpr: LambdaExpr, caseLabel: Label, endLabel: Label, allowTail: Boolean) {
+        addLabel(caseLabel)
+        gen(caseExpr.block, allowTail)
+        add(Jump(endLabel))
     }
 }
