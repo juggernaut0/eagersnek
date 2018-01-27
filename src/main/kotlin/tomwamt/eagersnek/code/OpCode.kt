@@ -1,6 +1,5 @@
 package tomwamt.eagersnek.code
 
-import tomwamt.eagersnek.parse.Pattern
 import tomwamt.eagersnek.parse.TypeCase
 
 interface OpCode
@@ -11,8 +10,8 @@ object Duplicate : OpCode
 // pops value, if it is correct type decomposes it, pushing values in reverse order, otherwise error
 class Decompose(val type: List<String>, val numParts: Int = 0) : OpCode
 class Jump(val label: Label) : OpCode
-class Match(val pattern: Pattern) : OpCode
-class JumpIfMatch(val pattern: Pattern, val label: Label) : OpCode
+class Match(val pattern: MatchPattern) : OpCode
+class JumpIfMatch(val pattern: MatchPattern, val label: Label) : OpCode
 class LoadName(val name: List<String>) : OpCode
 class LoadNumber(val value: Double) : OpCode
 class LoadString(val value: String) : OpCode

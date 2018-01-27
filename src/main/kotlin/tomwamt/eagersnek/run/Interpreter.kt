@@ -5,18 +5,26 @@ import tomwamt.eagersnek.code.*
 class Interpreter {
     val callStack: Stack<CallFrame> = Stack()
     val execStack: Stack<RuntimeObject> = Stack()
-    private val rootNamespace = Namespace()
+    private val rootNamespace = Builtin.makeRootNamespace()
 
     init {
         callStack.push(CallFrame(Scope(null)))
     }
 
     fun run(code: List<OpCode>) {
-        for (opcode in code) {
+        var ip = 0
+        while (ip < code.size) {
+            val opcode = code[ip]
+            ip += 1
             when (opcode) {
+                NoOp -> Unit
+                is Fail -> throw InterpreterException("Fail: ${opcode.msg}")
                 Pop -> execStack.pop()
                 Duplicate -> execStack.push(execStack.peek())
                 is Decompose -> decompose(opcode)
+                is Jump -> ip = opcode.label.target
+                is Match -> if (!match(opcode.pattern)) throw InterpreterException("Failed match")
+                is JumpIfMatch -> if (match(opcode.pattern)) ip = opcode.label.target
                 is LoadName -> execStack.push(findName(opcode.name))
                 is LoadNumber -> execStack.push(NumberObject(opcode.value))
                 is LoadString -> execStack.push(StringObject(opcode.value))
@@ -24,6 +32,7 @@ class Interpreter {
                 is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
                 is SaveNamespace -> findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> call(opcode)
+                is TailCall -> tailCall(opcode)
                 PushScope -> callStack.peek().pushScope()
                 PopScope -> callStack.peek().popScope()
                 is MkNamespace -> makeNamespace(opcode.name)
@@ -54,7 +63,7 @@ class Interpreter {
 
                 val obj = execStack.peek()
                 // just check
-                if (!type.cases.contains(obj.type)) {
+                if (obj.type !in type.cases) {
                     throw InterpreterException("Expected a ${type.name}, got ${obj.type.name}")
                 }
             }
@@ -73,16 +82,52 @@ class Interpreter {
         }
     }
 
-    private fun call(opcode: Call) {
-        val fn = execStack.pop() as? FunctionObject ?: throw InterpreterException("not a func")
-
-        if (opcode.tail) {
-            if (opcode.nargs != fn.numArgs) {
-                // TODO
+    private fun match(pattern: MatchPattern, obj: RuntimeObject? = null): Boolean {
+        val o = obj ?: execStack.pop()
+        return when (pattern) {
+            AlwaysMatch -> true
+            UnitMatch -> o.type == Builtin.Unit
+            EmptyListMatch -> o.type == Builtin.ListEmpty
+            is NumberMatch -> o is NumberObject && o.value == pattern.value
+            is StringMatch -> o is StringObject && o.value == pattern.value
+            is TypeMatch -> {
+                val type = findType(pattern.typename)
+                when (type) {
+                    NumberType, StringType, FunctionType ->
+                        o.type == type
+                                && pattern.inners.size == 1
+                                && match(pattern.inners[0], o)
+                    is ParentType ->
+                        o.type in type.cases
+                                && pattern.inners.size == 1
+                                && match(pattern.inners[0], o)
+                    is TypeCase ->
+                        o is CaseObject
+                                && o.type == type
+                                && pattern.inners.size == type.fieldCount
+                                && pattern.inners.zip(o.data).all { (p, d) -> match(p, d) }
+                    else -> false
+                }
             }
+            else -> false
         }
-        // TODO currying?
-        fn.call(this)
+    }
+
+    private fun call(opcode: Call) {
+        val fn = execStack.pop() as? FunctionObject ?: throw InterpreterException("not a function")
+        
+        when {
+            opcode.nargs == fn.numArgs -> fn.call(this)
+            opcode.nargs < fn.numArgs -> {
+                val args = List(opcode.nargs) { execStack.pop() }
+                execStack.push(PartialFunction(fn, args))
+            }
+            else -> throw InterpreterException("Too many arguments given for function")
+        }
+    }
+
+    private fun tailCall(opcode: TailCall) {
+        TODO()
     }
 
     private fun makeNamespace(path: List<String>) {

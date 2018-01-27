@@ -13,10 +13,6 @@ class CompiledCode : AbstractList<OpCode>() {
         code.add(opCode)
     }
 
-    fun addAll(opCodes: Iterable<OpCode>) {
-        code.addAll(opCodes)
-    }
-
     fun addLabel(label: Label) {
         label.attach(code.size)
         labels.add(label)

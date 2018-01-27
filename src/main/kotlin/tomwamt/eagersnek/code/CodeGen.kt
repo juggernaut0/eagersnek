@@ -3,6 +3,9 @@ package tomwamt.eagersnek.code
 import tomwamt.eagersnek.parse.*
 
 object CodeGen {
+    private val emptyListName = listOf("Empty")
+    private val listConsName = listOf("::")
+
     fun compile(ast: AST): CompiledCode {
         val code = CompiledCode()
 
@@ -61,7 +64,7 @@ object CodeGen {
     private fun CompiledCode.savePattern(pattern: Pattern, namespace: List<String>?) {
         return when (pattern) {
             is WildcardPattern -> add(Pop)
-            is ConstPattern -> matchConst(pattern)
+            is ConstPattern -> add(Match(convertPattern(pattern)))
             is NamePattern -> saveName(pattern, namespace)
             is ListPattern -> saveList(pattern, namespace)
             is TypePattern -> saveType(pattern, namespace)
@@ -69,8 +72,25 @@ object CodeGen {
         }
     }
 
-    private fun CompiledCode.matchConst(pattern: ConstPattern) {
-        add(Match(pattern))
+    private fun convertPattern(pattern: Pattern): MatchPattern {
+        return when (pattern) {
+            is ConstPattern -> when (pattern.const.type) {
+                ConstType.NUMBER -> NumberMatch(pattern.const.value.toDouble())
+                ConstType.STRING -> StringMatch(pattern.const.value.trimQuotes())
+                ConstType.EMPTY_LIST -> EmptyListMatch
+                ConstType.UNIT -> UnitMatch
+            }
+            is NamePattern, is WildcardPattern -> AlwaysMatch
+            is ListPattern -> {
+                var res: MatchPattern = EmptyListMatch
+                pattern.inners
+                        .asReversed()
+                        .forEach { res = TypeMatch(listConsName, listOf(convertPattern(it), res)) }
+                res
+            }
+            is TypePattern -> TypeMatch(pattern.name.parts, pattern.params.map { convertPattern(it) })
+            else -> throw NotImplementedError("${pattern.javaClass.name} is not supported")
+        }
     }
 
     private fun CompiledCode.saveName(pattern: NamePattern, namespace: List<String>?) {
@@ -110,10 +130,14 @@ object CodeGen {
     private fun CompiledCode.genConst(constLiteral: ConstLiteral) {
         when (constLiteral.type) {
             ConstType.NUMBER -> add(LoadNumber(constLiteral.value.toDouble()))
-            ConstType.STRING -> add(LoadString(constLiteral.value))
+            ConstType.STRING -> add(LoadString(constLiteral.value.trimQuotes()))
             ConstType.UNIT -> add(LoadName(listOf("Unit")))
             ConstType.EMPTY_LIST -> genEmptyList()
         }
+    }
+
+    private fun String.trimQuotes(): String {
+        return substring(1, lastIndex)
     }
 
     private fun CompiledCode.genEmptyList() = add(LoadName(listOf("Empty")))
@@ -165,7 +189,7 @@ object CodeGen {
 
         cases.zip(labels).forEach { (case, label) ->
             add(Duplicate)
-            add(JumpIfMatch(case.params[0], label))
+            add(JumpIfMatch(convertPattern(case.params[0]), label))
         }
         add(Fail("no match"))
 
@@ -177,6 +201,7 @@ object CodeGen {
 
     private fun CompiledCode.genMatchCase(caseExpr: LambdaExpr, caseLabel: Label, endLabel: Label, allowTail: Boolean) {
         addLabel(caseLabel)
+        savePattern(caseExpr.params[0], null)
         gen(caseExpr.block, allowTail)
         add(Jump(endLabel))
     }
