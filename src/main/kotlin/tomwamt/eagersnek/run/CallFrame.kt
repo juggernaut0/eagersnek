@@ -9,6 +9,6 @@ class CallFrame(baseScope: Scope) {
     }
 
     fun popScope() {
-        scope = scope.parent ?: throw InterpreterError("no pop")
+        scope = scope.parent ?: throw InterpreterException("no pop")
     }
 }

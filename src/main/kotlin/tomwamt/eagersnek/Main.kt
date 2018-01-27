@@ -2,7 +2,7 @@ package tomwamt.eagersnek
 
 import tomwamt.eagersnek.parse.ASTParser
 import tomwamt.eagersnek.parse.Scanner
-import tomwamt.eagersnek.run.CodeGen
+import tomwamt.eagersnek.code.CodeGen
 import tomwamt.eagersnek.run.Interpreter
 import java.nio.file.Files
 import java.nio.file.Paths

@@ -1,6 +1,5 @@
-package tomwamt.eagersnek.run
+package tomwamt.eagersnek.code
 
-import tomwamt.eagersnek.except.CodeGenException
 import tomwamt.eagersnek.parse.*
 
 object CodeGen {
@@ -10,10 +9,13 @@ object CodeGen {
         return list
     }
 
-    fun compile(ast: AST) = withList {
-        // TODO imports
-        addAll(genNamespace(ast.rootNamespace))
-        ast.expr?.let { addAll(genCall(it, false)) }
+    fun compile(ast: AST): CompiledCode {
+        val ops = withList {
+            // TODO imports
+            addAll(genNamespace(ast.rootNamespace))
+            ast.expr?.let { addAll(genCall(it, false)) }
+        }
+        TODO("labels")
     }
 
     private fun genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) = withList {
@@ -143,6 +145,6 @@ object CodeGen {
 
     private fun genLambda(lambdaExpr: LambdaExpr) = withList {
         val body = lambdaExpr.params.flatMap { savePattern(it, null) } + gen(lambdaExpr.block, true)
-        add(LoadFunction(body))
+        add(LoadFunction(body, lambdaExpr.params.size))
     }
 }
