@@ -8,7 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    val path = "examples/predef.ess"
+    val path = args[0]
     val src = String(Files.readAllBytes(Paths.get(path)))
     println("loaded")
     val ast = ASTParser.parse(Scanner.scan(src))

@@ -1,7 +1,7 @@
 let flip = { f a b -> (f b a) }
 
 namespace List {
-    let fold = { folder state list ->
+    let fold = { (Function folder) state (List list) ->
     	(match list [
     		{ [] -> state }
     		{ (:: h t) -> (. folder (folder state h) t) }
@@ -10,9 +10,9 @@ namespace List {
 
     let reverse = (fold (flip ::) [])
 
-    let foldr = { folder state list -> (fold folder state (reverse list)) }
+    let foldr = { (Function folder) state (List list) -> (fold folder state (reverse list)) }
 
-    let map = { mapper list ->
+    let map = { (Function mapper) (List list) ->
     	(foldr { acc x -> (:: (mapper x) acc) } [] list)
     }
 
