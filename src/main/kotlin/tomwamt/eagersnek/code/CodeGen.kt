@@ -5,6 +5,7 @@ import tomwamt.eagersnek.parse.*
 object CodeGen {
     private val emptyListName = listOf("Empty")
     private val listConsName = listOf("::")
+    private val unitName = listOf("Unit")
 
     fun compile(ast: AST): CompiledCode {
         val code = CompiledCode()
@@ -13,7 +14,6 @@ object CodeGen {
         code.genNamespace(ast.rootNamespace)
         ast.expr?.let { code.genCall(it, false) }
 
-        // TODO("labels")
         return code
     }
 
@@ -21,10 +21,14 @@ object CodeGen {
         val name = parent + namespace.name.parts
         if (name.isNotEmpty()) {
             add(MkNamespace(name, namespace.name.parts[0]))
+            add(PushScope)
         }
-        add(PushScope)
+
         namespace.decls.forEach { genDecl(it, name) }
-        add(PopScope)
+
+        if (name.isNotEmpty()) {
+            add(PopScope)
+        }
     }
 
     private fun CompiledCode.genDecl(decl: Decl, parent: List<String>) {
@@ -103,10 +107,10 @@ object CodeGen {
 
     private fun CompiledCode.saveList(pattern: ListPattern, namespace: List<String>?) {
         for (p in pattern.inners) {
-            add(Decompose(listOf("::"), 2))
+            add(Decompose(listConsName, 2))
             savePattern(p, namespace)
         }
-        add(Decompose(listOf("Empty")))
+        add(Decompose(emptyListName))
     }
 
     private fun CompiledCode.saveType(pattern: TypePattern, namespace: List<String>?) {
@@ -131,8 +135,8 @@ object CodeGen {
         when (constLiteral.type) {
             ConstType.NUMBER -> add(LoadNumber(constLiteral.value.toDouble()))
             ConstType.STRING -> add(LoadString(constLiteral.value.trimQuotes()))
-            ConstType.UNIT -> add(LoadName(listOf("Unit")))
-            ConstType.EMPTY_LIST -> genEmptyList()
+            ConstType.UNIT -> add(LoadName(unitName))
+            ConstType.EMPTY_LIST -> add(LoadName(emptyListName))
         }
     }
 
@@ -140,10 +144,8 @@ object CodeGen {
         return substring(1, lastIndex)
     }
 
-    private fun CompiledCode.genEmptyList() = add(LoadName(listOf("Empty")))
-
     private fun CompiledCode.genList(listExpr: ListExpr) {
-        genEmptyList()
+        add(LoadName(emptyListName))
         for (block in listExpr.elements.reversed()) {
             gen(block, false)
             add(LoadName(listOf("::")))

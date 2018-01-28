@@ -1,14 +1,32 @@
-type UnitT = Unit
+let flip = { f a b -> (f b a) }
 
-type Bool = True | False
-
-type List = :: h t | Empty {
+namespace List {
     let fold = { folder state list ->
     	(match list [
-    		{ Empty -> state }
-    		{ (:: h t) -> (fold folder (folder state h) t) }
+    		{ [] -> state }
+    		{ (:: h t) -> (. folder (folder state h) t) }
     	])
+    }
+
+    let reverse = (fold (flip ::) [])
+
+    let foldr = { folder state list -> (fold folder state (reverse list)) }
+
+    let map = { mapper list ->
+    	(foldr { acc x -> (:: (mapper x) acc) } [] list)
+    }
+
+    let foreach = { (Function f) (List list) ->
+        (match list [
+            { [] -> () }
+            { (:: h t) ->
+                let _ = (f h)
+                (. f t)
+            }
+        ])
     }
 }
 
-let ignore = { _ -> () }
+let l = [1 2 3 4 5]
+let squares = (List.map { x -> (* x x) } l)
+(List.foreach println squares)

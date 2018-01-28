@@ -2,7 +2,6 @@ package tomwamt.eagersnek.code
 
 class CompiledCode : AbstractList<OpCode>() {
     private val code: MutableList<OpCode> = ArrayList()
-    private val labels: MutableList<Label> = ArrayList()
 
     override val size: Int
         get() = code.size
@@ -15,6 +14,5 @@ class CompiledCode : AbstractList<OpCode>() {
 
     fun addLabel(label: Label) {
         label.attach(code.size)
-        labels.add(label)
     }
 }

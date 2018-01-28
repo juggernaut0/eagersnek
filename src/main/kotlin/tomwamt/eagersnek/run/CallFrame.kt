@@ -1,7 +1,7 @@
 package tomwamt.eagersnek.run
 
-class CallFrame(baseScope: Scope) {
-    var scope: Scope = baseScope
+class CallFrame(val fn: CompiledFunction) {
+    var scope: Scope = Scope(fn.baseScope)
         private set
 
     fun pushScope() {
@@ -10,5 +10,9 @@ class CallFrame(baseScope: Scope) {
 
     fun popScope() {
         scope = scope.parent ?: throw InterpreterException("no pop")
+    }
+
+    fun tailCall() {
+        scope = Scope(fn.baseScope)
     }
 }

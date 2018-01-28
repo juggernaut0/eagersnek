@@ -1,0 +1,10 @@
+let f = { a b c ->
+    let _ = (println a)
+    let _ = (println b)
+    let _ = (println c)
+    ()
+}
+
+let p = (f 1 2)
+
+(p 3)

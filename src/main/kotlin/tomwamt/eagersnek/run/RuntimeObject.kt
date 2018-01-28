@@ -13,16 +13,25 @@ abstract class FunctionObject(val numArgs: Int) : RuntimeObject(FunctionType) {
 }
 class CompiledFunction(private val code: List<OpCode>, val baseScope: Scope, numArgs: Int) : FunctionObject(numArgs) {
     override fun call(int: Interpreter) {
-        int.callStack.push(CallFrame(Scope(baseScope)))
+        int.callStack.push(CallFrame(this))
         int.run(code)
         int.callStack.pop()
     }
 }
 class PartialFunction(val fn: FunctionObject, val args: List<RuntimeObject>) : FunctionObject(fn.numArgs - args.size) {
     override fun call(int: Interpreter) {
-        args.forEach { int.execStack.push(it) }
+        args.asReversed().forEach { int.execStack.push(it) }
         fn.call(int)
     }
 }
 
-class CaseObject(type: Type, val data: List<RuntimeObject>) : RuntimeObject(type)
+class ConstructorFunction(val resultType: TypeCase) : FunctionObject(resultType.fieldCount) {
+    override fun call(int: Interpreter) {
+        val data = List(numArgs) { int.execStack.pop() }
+        val obj = CaseObject(resultType, data)
+        int.execStack.push(obj)
+    }
+}
+
+class CaseObject(type: TypeCase, val data: List<RuntimeObject>) : RuntimeObject(type)
+class SingletonObject(type: TypeCase) : RuntimeObject(type)

@@ -7,11 +7,18 @@ class Interpreter {
     val execStack: Stack<RuntimeObject> = Stack()
     private val rootNamespace = Builtin.makeRootNamespace()
 
-    init {
-        callStack.push(CallFrame(Scope(null)))
+    fun exec(code: CompiledCode) {
+        val main = CompiledFunction(code, Scope(null), 0)
+        try {
+            main.call(this)
+        } catch (e: InterpreterException) {
+            println(callStack)
+            println(execStack)
+            throw e
+        }
     }
 
-    fun run(code: List<OpCode>) {
+    internal fun run(code: List<OpCode>) {
         var ip = 0
         while (ip < code.size) {
             val opcode = code[ip]
@@ -32,7 +39,10 @@ class Interpreter {
                 is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
                 is SaveNamespace -> findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> call(opcode)
-                is TailCall -> tailCall(opcode)
+                is TailCall -> {
+                    tailCall(opcode)
+                    ip = 0
+                }
                 PushScope -> callStack.peek().pushScope()
                 PopScope -> callStack.peek().popScope()
                 is MkNamespace -> makeNamespace(opcode.name)
@@ -115,7 +125,7 @@ class Interpreter {
 
     private fun call(opcode: Call) {
         val fn = execStack.pop() as? FunctionObject ?: throw InterpreterException("not a function")
-        
+
         when {
             opcode.nargs == fn.numArgs -> fn.call(this)
             opcode.nargs < fn.numArgs -> {
@@ -127,7 +137,10 @@ class Interpreter {
     }
 
     private fun tailCall(opcode: TailCall) {
-        TODO()
+        val topFrame = callStack.peek()
+        if (topFrame.fn.numArgs != opcode.nargs) throw InterpreterException("Cannot create partial tail-call")
+
+        topFrame.tailCall()
     }
 
     private fun makeNamespace(path: List<String>) {
@@ -141,7 +154,12 @@ class Interpreter {
     }
 
     private fun makeType(opcode: MkType) {
-        TODO()
+        val ns = findNamespace(opcode.namespace)
+
+        val cases = opcode.cases.map { TypeCase(it.name, it.params.size) }
+        val parent = ParentType(opcode.name, cases)
+
+        ns.addType(parent)
     }
 
     private fun findNamespace(path: List<String>): Namespace {
@@ -159,7 +177,9 @@ class Interpreter {
 
     private fun findName(qname: List<String>): RuntimeObject {
         return if (qname.size == 1) {
-            callStack.peek().scope.find(qname[0]) ?: throw InterpreterException("No name ${qname[0]}")
+            callStack.peek().scope.find(qname[0])
+                    ?: rootNamespace.bindings[qname[0]]
+                    ?: throw InterpreterException("No name ${qname[0]}")
         } else {
             val ns = findNamespace(qname.subList(0, qname.lastIndex))
             ns.bindings[qname.last()] ?: throw InterpreterException("No name ${qname.last()}")

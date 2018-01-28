@@ -8,4 +8,4 @@ let foo = { n ->
     ])
 }
 
-(foo 5)
+(foo 10)

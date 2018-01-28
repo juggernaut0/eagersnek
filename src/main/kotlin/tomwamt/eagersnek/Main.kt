@@ -8,10 +8,12 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 fun main(args: Array<String>) {
-    val path = "examples/match.ess"
-    val code = String(Files.readAllBytes(Paths.get(path)))
-    println("file loaded")
-    val ast = ASTParser.parse(Scanner.scan(code))
-    val compiled = CodeGen.compile(ast)
-    println(compiled)
+    val path = "examples/predef.ess"
+    val src = String(Files.readAllBytes(Paths.get(path)))
+    println("loaded")
+    val ast = ASTParser.parse(Scanner.scan(src))
+    println("parsed")
+    val code = CodeGen.compile(ast)
+    println("compiled")
+    Interpreter().exec(code)
 }
