@@ -3,7 +3,7 @@ package tomwamt.eagersnek.parse
 object ASTParser : Parser<AST>() {
     override fun parse(tokens: Seq<Token>): AST {
         val imports = tokens.imports()
-        val rootNamespace = imports.seq.decls(QualifiedName(emptyList()))
+        val rootNamespace = imports.seq.decls(QualifiedName(emptyList()), true)
         val call = rootNamespace.seq.callExpr()
 
         return AST(imports.result, rootNamespace.result, call?.result)
@@ -12,8 +12,9 @@ object ASTParser : Parser<AST>() {
     private fun Seq<Token>.imports(): SeqResult<List<ImportStmt>> {
         return star {
             match(TokenType.KEYWORD, Keyword.IMPORT.kw)
-                    ?.require("qualified name") { qualName() }
-                    ?.map { ImportStmt(it) }
+                    ?.matchOrThrow(TokenType.KEYWORD, Keyword.FROM.kw)
+                    ?.expectOrThrow(TokenType.STRING)
+                    ?.map { filename -> ImportStmt(filename) }
         }
     }
 
@@ -27,27 +28,30 @@ object ASTParser : Parser<AST>() {
                 .map { (first, rest) -> QualifiedName(listOf(first, *rest.toTypedArray())) }
     }
 
-    private fun Seq<Token>.decls(name: QualifiedName): SeqResult<NamespaceDecl> {
-        return star { decl() }.map { NamespaceDecl(name, it) }
+    private fun Seq<Token>.decls(name: QualifiedName, public: Boolean): SeqResult<NamespaceDecl> {
+        return star { decl() }.map { NamespaceDecl(name, public, it) }
     }
 
     private fun Seq<Token>.decl(): SeqResult<Decl>? {
-        return namespace() ?: type() ?: binding()
+        val pb = match(TokenType.KEYWORD, Keyword.PUBLIC.kw)
+        val public = pb != null
+        val s = pb ?: this
+        return s.namespace(public) ?: s.type(public) ?: s.binding(public)
     }
 
-    private fun Seq<Token>.declBlock(name: QualifiedName): SeqResult<NamespaceDecl>? {
+    private fun Seq<Token>.declBlock(name: QualifiedName, public: Boolean): SeqResult<NamespaceDecl>? {
         return match(TokenType.SYMBOL, "{")
-                ?.decls(name)
+                ?.decls(name, public)
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "}") }
     }
 
-    private fun Seq<Token>.namespace(): SeqResult<NamespaceDecl>? {
+    private fun Seq<Token>.namespace(public: Boolean): SeqResult<NamespaceDecl>? {
         return match(TokenType.KEYWORD, Keyword.NAMESPACE.kw)
                 ?.require("qualified name") { qualName() }
-                ?.let { it.seq.declBlock(it.result) }
+                ?.let { it.seq.declBlock(it.result, public) }
     }
 
-    private fun Seq<Token>.type(): SeqResult<TypeDecl>? {
+    private fun Seq<Token>.type(public: Boolean): SeqResult<TypeDecl>? {
         val name = (match(TokenType.KEYWORD, Keyword.TYPE.kw) ?: return null)
                 .require("qualified name") { qualName() }
 
@@ -55,10 +59,10 @@ object ASTParser : Parser<AST>() {
                 .matchOrThrow(TokenType.SYMBOL, "=")
                 .typeCases()
 
-        val namespace = cases.seq.maybe { declBlock(name.result) }
+        val namespace = cases.seq.maybe { declBlock(name.result, public) }
 
         return SeqResult(
-                TypeDecl(name.result, cases.result, namespace.result),
+                TypeDecl(name.result, public, cases.result, namespace.result),
                 namespace.seq)
     }
 
@@ -80,12 +84,12 @@ object ASTParser : Parser<AST>() {
                 .map { (name, params) -> TypeCase(name, params) }
     }
 
-    private fun Seq<Token>.binding(): SeqResult<Binding>? {
+    private fun Seq<Token>.binding(public: Boolean = false): SeqResult<Binding>? {
         return match(TokenType.KEYWORD, Keyword.LET.kw)
                 ?.require("pattern") { pattern() }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "=") }
                 ?.then { require("block") { block() } }
-                ?.map { (pattern, block) -> Binding(pattern, block) }
+                ?.map { (pattern, block) -> Binding(pattern, block, public) }
     }
 
     private fun Seq<Token>.pattern(): SeqResult<Pattern>? {

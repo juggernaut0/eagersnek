@@ -13,7 +13,7 @@ object Builtin {
     val Bool = ParentType("Bool", listOf(True, False))
 
     fun makeRootNamespace(): Namespace {
-        val ns = Namespace()
+        val ns = Namespace(true)
 
         ns.types["Number"] = NumberType
         ns.types["String"] = StringType

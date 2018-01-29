@@ -1,5 +1,6 @@
 package tomwamt.eagersnek.code
 
+import tomwamt.eagersnek.parse.QualifiedName
 import tomwamt.eagersnek.parse.TypeCase
 
 interface OpCode
@@ -24,5 +25,6 @@ class Call(val nargs: Int) : OpCode
 class TailCall(val nargs: Int) : OpCode
 object PushScope : OpCode
 object PopScope : OpCode
-class MkNamespace(val name: List<String>, val localName: String) : OpCode
+class MkNamespace(val name: List<String>, val localName: String, val public: Boolean) : OpCode
 class MkType(val name: String, val namespace: List<String>, val cases: List<TypeCase>) : OpCode
+class ImportAll(val filename: String) : OpCode

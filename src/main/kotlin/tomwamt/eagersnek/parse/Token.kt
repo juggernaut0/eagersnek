@@ -17,6 +17,8 @@ enum class TokenType {
 
 enum class Keyword(val kw: String) {
     IMPORT("import"),
+    FROM("from"),
+    PUBLIC("public"),
     NAMESPACE("namespace"),
     TYPE("type"),
     LET("let")

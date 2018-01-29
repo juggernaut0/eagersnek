@@ -1,22 +1,22 @@
-let flip = { f a b -> (f b a) }
+public let flip = { f a b -> (f b a) }
 
-namespace List {
-    let fold = { (Function folder) state (List list) ->
+public namespace List {
+    public let fold = { (Function folder) state (List list) ->
     	(match list [
     		{ [] -> state }
     		{ (:: h t) -> (. folder (folder state h) t) }
     	])
     }
 
-    let reverse = (fold (flip ::) [])
+    public let reverse = (fold (flip ::) [])
 
-    let foldr = { (Function folder) state (List list) -> (fold folder state (reverse list)) }
+    public let foldr = { (Function folder) state (List list) -> (fold folder state (reverse list)) }
 
-    let map = { (Function mapper) (List list) ->
+    public let map = { (Function mapper) (List list) ->
     	(foldr { acc x -> (:: (mapper x) acc) } [] list)
     }
 
-    let foreach = { (Function f) (List list) ->
+    public let foreach = { (Function f) (List list) ->
         (match list [
             { [] -> () }
             { (:: h t) ->
@@ -26,7 +26,3 @@ namespace List {
         ])
     }
 }
-
-let l = [1 2 3 4 5]
-let squares = (List.map { x -> (* x x) } l)
-(List.foreach println squares)

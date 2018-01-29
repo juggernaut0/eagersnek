@@ -5,7 +5,7 @@ import tomwamt.eagersnek.code.*
 class Interpreter {
     val callStack: Stack<CallFrame> = Stack()
     val execStack: Stack<RuntimeObject> = Stack()
-    private val rootNamespace = Builtin.makeRootNamespace()
+    val rootNamespace = Builtin.makeRootNamespace()
 
     fun exec(code: CompiledCode) {
         val main = CompiledFunction(code, Scope(null), 0)
@@ -45,8 +45,9 @@ class Interpreter {
                 }
                 PushScope -> callStack.peek().pushScope()
                 PopScope -> callStack.peek().popScope()
-                is MkNamespace -> makeNamespace(opcode.name)
+                is MkNamespace -> makeNamespace(opcode.name, opcode.public)
                 is MkType -> makeType(opcode)
+                is ImportAll -> Module.fromFile(opcode.filename).importInto(rootNamespace)
                 else -> throw InterpreterException("unsupported opcode ${opcode.javaClass.name}")
             }
         }
@@ -143,11 +144,12 @@ class Interpreter {
         topFrame.tailCall()
     }
 
-    private fun makeNamespace(path: List<String>) {
+    private fun makeNamespace(path: List<String>, public: Boolean) {
         var ns = rootNamespace
         for (part in path) {
+            if (public && !ns.public) throw InterpreterException("Cannot add public namespace as child of private namespace")
             if (part !in ns.subnames) {
-                ns.subnames[part] = Namespace()
+                ns.subnames[part] = Namespace(public)
             }
             ns = ns.subnames[part]!!
         }

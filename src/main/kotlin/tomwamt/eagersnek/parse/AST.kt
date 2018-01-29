@@ -1,18 +1,18 @@
 package tomwamt.eagersnek.parse
 
 class AST(val imports: List<ImportStmt>, val rootNamespace: NamespaceDecl, val expr: CallExpr?)
-class ImportStmt(val name: QualifiedName) {
-    override fun toString() = "import $name"
+class ImportStmt(val filename: String) {
+    override fun toString() = "import from '$filename'"
 }
 interface Decl
-class NamespaceDecl(val name: QualifiedName, val decls: List<Decl>) : Decl
-class TypeDecl(val name: QualifiedName, val cases: List<TypeCase>, val namespace: NamespaceDecl?) : Decl {
+class NamespaceDecl(val name: QualifiedName, val public: Boolean, val decls: List<Decl>) : Decl
+class TypeDecl(val name: QualifiedName, val public: Boolean, val cases: List<TypeCase>, val namespace: NamespaceDecl?) : Decl {
     override fun toString(): String = "type $name ..."
 }
 class TypeCase(val name: String, val params: List<String>) {
     override fun toString(): String = (listOf(name) + params).joinToString(" ")
 }
-class Binding(val pattern: Pattern, val block: Block) : Decl {
+class Binding(val pattern: Pattern, val block: Block, val public: Boolean) : Decl {
     override fun toString() = "let $pattern = ..."
 }
 interface Pattern

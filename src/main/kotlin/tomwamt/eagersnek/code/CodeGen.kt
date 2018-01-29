@@ -10,17 +10,21 @@ object CodeGen {
     fun compile(ast: AST): CompiledCode {
         val code = CompiledCode()
 
-        // TODO imports
+        ast.imports.forEach { code.genImport(it) }
         code.genNamespace(ast.rootNamespace)
         ast.expr?.let { code.genCall(it, false) }
 
         return code
     }
 
+    private fun CompiledCode.genImport(importStmt: ImportStmt) {
+        add(ImportAll(importStmt.filename.trimQuotes()))
+    }
+
     private fun CompiledCode.genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) {
         val name = parent + namespace.name.parts
         if (name.isNotEmpty()) {
-            add(MkNamespace(name, namespace.name.parts[0]))
+            add(MkNamespace(name, namespace.name.parts[0], namespace.public))
             add(PushScope)
         }
 
@@ -37,7 +41,7 @@ object CodeGen {
             is TypeDecl -> genType(decl, parent)
             is Binding -> {
                 gen(decl.block, false)
-                savePattern(decl.pattern, parent)
+                savePattern(decl.pattern, if (decl.public) parent else null)
             }
             else -> throw NotImplementedError("${decl.javaClass.name} is not supported")
         }
