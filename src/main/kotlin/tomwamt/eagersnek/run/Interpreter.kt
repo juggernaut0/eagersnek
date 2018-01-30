@@ -8,7 +8,7 @@ class Interpreter {
     val rootNamespace = Builtin.makeRootNamespace()
 
     fun exec(code: CompiledCode) {
-        val main = CompiledFunction(code, Scope(null), 0)
+        val main = CompiledFunction(code, Scope(null), rootNamespace, 0)
         try {
             main.call(this)
         } catch (e: InterpreterException) {
@@ -35,9 +35,9 @@ class Interpreter {
                 is LoadName -> execStack.push(findName(opcode.name))
                 is LoadNumber -> execStack.push(NumberObject(opcode.value))
                 is LoadString -> execStack.push(StringObject(opcode.value))
-                is LoadFunction -> execStack.push(CompiledFunction(opcode.code, callStack.peek().scope, opcode.paramCount))
+                is LoadFunction -> execStack.push(CompiledFunction(opcode.code, callStack.peek().scope, rootNamespace, opcode.paramCount))
                 is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
-                is SaveNamespace -> findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
+                is SaveNamespace -> rootNamespace.findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> call(opcode)
                 is TailCall -> {
                     tailCall(opcode)
@@ -156,7 +156,7 @@ class Interpreter {
     }
 
     private fun makeType(opcode: MkType) {
-        val ns = findNamespace(opcode.namespace)
+        val ns = rootNamespace.findNamespace(opcode.namespace)
 
         val cases = opcode.cases.map { TypeCase(it.name, it.params.size) }
         val parent = ParentType(opcode.name, cases)
@@ -164,28 +164,18 @@ class Interpreter {
         ns.addType(parent)
     }
 
-    private fun findNamespace(path: List<String>): Namespace {
-        var ns = rootNamespace
-        for (part in path) {
-            ns = ns.subnames[part] ?: throw InterpreterException("No namespace $part")
+    private fun findName(qname: List<String>): RuntimeObject {
+        val topFrame = callStack.peek()
+
+        if (qname.size == 1) {
+            topFrame.scope.find(qname[0])?.let { return it }
         }
-        return ns
+
+        return topFrame.fn.baseNs.findName(qname)
     }
 
     private fun findType(qname: List<String>): Type {
-        val ns = findNamespace(qname.subList(0, qname.lastIndex))
-        return ns.types[qname.last()] ?: throw InterpreterException("No type ${qname.last()}")
-    }
-
-    private fun findName(qname: List<String>): RuntimeObject {
-        return if (qname.size == 1) {
-            callStack.peek().scope.find(qname[0])
-                    ?: rootNamespace.bindings[qname[0]]
-                    ?: throw InterpreterException("No name ${qname[0]}")
-        } else {
-            val ns = findNamespace(qname.subList(0, qname.lastIndex))
-            ns.bindings[qname.last()] ?: throw InterpreterException("No name ${qname.last()}")
-        }
+        return callStack.peek().fn.baseNs.findType(qname)
     }
 
     class Stack<T> {
@@ -194,5 +184,9 @@ class Interpreter {
         fun push(obj: T) = store.add(obj)
         fun pop(): T = store.removeAt(store.lastIndex)
         fun peek(): T = store[store.lastIndex]
+
+        override fun toString(): String {
+            return store.toString()
+        }
     }
 }

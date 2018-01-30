@@ -1,0 +1,7 @@
+namespace Hidden {
+    let thing = "This is not public!"
+
+    public let get_thing = { -> thing }
+}
+
+public let get_thing = Hidden.get_thing

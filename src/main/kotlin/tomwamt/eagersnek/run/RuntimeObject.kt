@@ -11,7 +11,7 @@ class StringObject(val value: String) : RuntimeObject(StringType)
 abstract class FunctionObject(val numArgs: Int) : RuntimeObject(FunctionType) {
     abstract fun call(int: Interpreter)
 }
-class CompiledFunction(private val code: List<OpCode>, val baseScope: Scope, numArgs: Int) : FunctionObject(numArgs) {
+class CompiledFunction(private val code: List<OpCode>, val baseScope: Scope, val baseNs: Namespace, numArgs: Int) : FunctionObject(numArgs) {
     override fun call(int: Interpreter) {
         int.callStack.push(CallFrame(this))
         int.run(code)
