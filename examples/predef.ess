@@ -1,4 +1,8 @@
+public let ident = { x -> x }
+public let >> = { f g x -> (g (f x)) }
 public let flip = { f a b -> (f b a) }
+
+type Option = Some x | None
 
 public namespace List {
     public let fold = { (Function folder) state (List list) ->

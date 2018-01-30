@@ -18,7 +18,11 @@ object CodeGen {
     }
 
     private fun CompiledCode.genImport(importStmt: ImportStmt) {
-        add(ImportAll(importStmt.filename.trimQuotes()))
+        add(if (importStmt.names.isEmpty()) {
+            ImportAll(importStmt.filename.trimQuotes())
+        } else {
+            ImportNames(importStmt.filename.trimQuotes(), importStmt.names.map { it.parts })
+        })
     }
 
     private fun CompiledCode.genNamespace(namespace: NamespaceDecl, parent: List<String> = emptyList()) {

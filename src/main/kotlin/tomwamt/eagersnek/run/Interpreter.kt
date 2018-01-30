@@ -48,6 +48,9 @@ class Interpreter {
                 is MkNamespace -> makeNamespace(opcode.name, opcode.public)
                 is MkType -> makeType(opcode)
                 is ImportAll -> Module.fromFile(opcode.filename).importInto(rootNamespace)
+                is ImportNames -> Module.fromFile(opcode.filename).let {
+                    opcode.names.forEach { name -> it.importNameInto(name, rootNamespace) }
+                }
                 else -> throw InterpreterException("unsupported opcode ${opcode.javaClass.name}")
             }
         }

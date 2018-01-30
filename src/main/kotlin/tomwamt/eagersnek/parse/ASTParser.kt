@@ -12,9 +12,10 @@ object ASTParser : Parser<AST>() {
     private fun Seq<Token>.imports(): SeqResult<List<ImportStmt>> {
         return star {
             match(TokenType.KEYWORD, Keyword.IMPORT.kw)
-                    ?.matchOrThrow(TokenType.KEYWORD, Keyword.FROM.kw)
-                    ?.expectOrThrow(TokenType.STRING)
-                    ?.map { filename -> ImportStmt(filename) }
+                    ?.star { qualName() }
+                    ?.thenConsume { matchOrThrow(TokenType.KEYWORD, Keyword.FROM.kw) }
+                    ?.then { expectOrThrow(TokenType.STRING) }
+                    ?.map { (names, filename) -> ImportStmt(filename, names) }
         }
     }
 

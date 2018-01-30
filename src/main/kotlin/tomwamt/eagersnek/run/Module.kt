@@ -10,18 +10,40 @@ class Module(private val names: Namespace) {
     companion object {
         var appDir: String = "."
 
+        private val cache: MutableMap<String, Module> = mutableMapOf()
+
         fun fromFile(filename: String): Module {
-            val src = String(Files.readAllBytes(Paths.get(appDir, filename)))
-            val ast = ASTParser.parse(Scanner.scan(src))
-            val code = CodeGen.compile(ast)
-            val interpreter = Interpreter()
-            interpreter.exec(code)
-            return Module(interpreter.rootNamespace)
+            return cache.computeIfAbsent(filename) {
+                val src = String(Files.readAllBytes(Paths.get(appDir, filename)))
+                val ast = ASTParser.parse(Scanner.scan(src))
+                val code = CodeGen.compile(ast)
+                val interpreter = Interpreter()
+                interpreter.exec(code)
+                Module(interpreter.rootNamespace)
+            }
         }
     }
 
     fun importInto(target: Namespace) {
         import(names, target)
+    }
+
+    fun importNameInto(qname: List<String>, target: Namespace) {
+        var src = names
+        var tgt = target
+        for (name in qname.subList(0, qname.lastIndex)) {
+            src = src.subnames[name] ?: throw InterpreterException("No namespace $name")
+            if (!src.public) throw InterpreterException("${qname.joinToString(".")} is not public")
+            tgt = tgt.subnames.computeIfAbsent(name) { Namespace(true) }
+        }
+        val last = qname.last()
+
+        src.subnames[last]?.let {
+            if (!it.public) throw InterpreterException("${qname.joinToString(".")} is not public")
+            import(it, tgt.subnames.computeIfAbsent(last) { Namespace(true) })
+        }
+        src.types[last]?.let { tgt.types[last] = it }
+        src.bindings[last]?.let { tgt.bindings[last] = it }
     }
 
     private fun import(src: Namespace, target: Namespace) {

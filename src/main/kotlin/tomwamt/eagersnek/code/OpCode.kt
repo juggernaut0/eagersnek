@@ -1,6 +1,5 @@
 package tomwamt.eagersnek.code
 
-import tomwamt.eagersnek.parse.QualifiedName
 import tomwamt.eagersnek.parse.TypeCase
 
 interface OpCode
@@ -28,3 +27,4 @@ object PopScope : OpCode
 class MkNamespace(val name: List<String>, val localName: String, val public: Boolean) : OpCode
 class MkType(val name: String, val namespace: List<String>, val cases: List<TypeCase>) : OpCode
 class ImportAll(val filename: String) : OpCode
+class ImportNames(val filename: String, val names: List<List<String>>) : OpCode

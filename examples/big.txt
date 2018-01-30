@@ -1,35 +1,4 @@
-import foo.bar
-
-# fold: (a -> b -> a) -> a -> [b] -> a
-let fold = { folder state list ->
-	(match list [
-		{ [] -> state }
-		{ (:: h t) -> (fold folder (folder state h) t) }
-	])
-}
 let sum = (fold 0 +)
-
-# flip: (b -> a -> c) -> a -> b -> c
-let flip = { f a b -> (f b a) }
-
-let reverse = (fold (flip ::) [])
-
-let foldr = { folder state list -> (fold folder state (reverse list)) }
-
-let map = { mapper list ->
-	(foldr { acc x -> (:: (mapper x) acc) } [] list)
-}
-
-let id = { x -> x }
-let >> = { f g x -> (g (f x)) }
-
-# simple type with params
-type Pair a b
-let fst = { (Pair a b) -> a }
-
-# Union type: no type params, but = and subtypes
-type Bool = True | False  # really this would be builtin
-type Option = Some x | None
 
 # unfold = (b -> (Pair a b) Option) -> b -> a List
 let unfold = { unfolder init -> 

@@ -1,8 +1,8 @@
 package tomwamt.eagersnek.parse
 
 class AST(val imports: List<ImportStmt>, val rootNamespace: NamespaceDecl, val expr: CallExpr?)
-class ImportStmt(val filename: String) {
-    override fun toString() = "import from '$filename'"
+class ImportStmt(val filename: String, val names: List<QualifiedName>) {
+    override fun toString() = "import ... from '$filename'"
 }
 interface Decl
 class NamespaceDecl(val name: QualifiedName, val public: Boolean, val decls: List<Decl>) : Decl

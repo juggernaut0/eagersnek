@@ -1,5 +1,5 @@
 program = import* decl* call_expr?
-import = 'import' 'from' STRING
+import = 'import' qualified_ident* 'from' STRING
 qualified_ident = IDENT ('.' IDENT)*
 decl = 'public'? (namespace | type | binding)
 namespace = 'namespace' qualified_ident decl_block

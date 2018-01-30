@@ -1,4 +1,4 @@
-import from 'predef.ess'
+import List from 'predef.ess'
 
 let l = [1 2 3 4 5]
 let squares = (List.map { x -> (* x x) } l)
