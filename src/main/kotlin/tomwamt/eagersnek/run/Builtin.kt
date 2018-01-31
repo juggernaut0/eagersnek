@@ -22,6 +22,8 @@ object Builtin {
         ns.addType(UnitT)
         ns.addType(List)
         ns.addType(Bool)
+        val trueObj = ns.bindings[True.name]!!
+        val falseObj = ns.bindings[False.name]!!
 
         ns.bindings["println"] = object : FunctionObject(1) {
             override fun call(int: Interpreter) {
@@ -46,6 +48,26 @@ object Builtin {
         ns.bindings["-"] = BinaryOp { n1, n2 -> n1 - n2 }
         ns.bindings["*"] = BinaryOp { n1, n2 -> n1 * n2 }
         ns.bindings["/"] = BinaryOp { n1, n2 -> n1 / n2 }
+
+        ns.bindings["eq"] = object : FunctionObject(2) {
+            override fun call(int: Interpreter) {
+                val o1 = int.execStack.pop()
+                val o2 = int.execStack.pop()
+
+                int.execStack.push(if (eq(o1, o2)) trueObj else falseObj)
+            }
+
+            fun eq(o1: RuntimeObject, o2: RuntimeObject): Boolean {
+                return when {
+                    o1 == o2 -> true
+                    o1.type != o2.type -> false
+                    o1 is NumberObject && o2 is NumberObject -> o1.value == o2.value
+                    o1 is StringObject && o2 is StringObject -> o1.value == o2.value
+                    o1 is CaseObject && o2 is CaseObject -> o1.data.zip(o2.data).all { (d1, d2) -> eq(d1, d2) }
+                    else -> false
+                }
+            }
+        }
 
         return ns
     }

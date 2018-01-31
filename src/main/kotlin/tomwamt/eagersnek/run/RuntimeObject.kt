@@ -34,4 +34,6 @@ class ConstructorFunction(val resultType: TypeCase) : FunctionObject(resultType.
 }
 
 class CaseObject(type: TypeCase, val data: List<RuntimeObject>) : RuntimeObject(type)
-class SingletonObject(type: TypeCase) : RuntimeObject(type)
+class SingletonObject(type: TypeCase) : RuntimeObject(type) {
+    override fun toString(): String = "SingletonObject<${type.name}>"
+}

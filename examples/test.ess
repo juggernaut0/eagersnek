@@ -1,3 +1,0 @@
-import from 'private.ess'
-
-(println (get_thing))

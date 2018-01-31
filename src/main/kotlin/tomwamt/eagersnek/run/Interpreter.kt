@@ -2,10 +2,16 @@ package tomwamt.eagersnek.run
 
 import tomwamt.eagersnek.code.*
 
-class Interpreter {
+class Interpreter(loadPredef: Boolean = true) {
     val callStack: Stack<CallFrame> = Stack()
     val execStack: Stack<RuntimeObject> = Stack()
     val rootNamespace = Builtin.makeRootNamespace()
+
+    init {
+        if (loadPredef) {
+            Module.predef.importInto(rootNamespace)
+        }
+    }
 
     fun exec(code: CompiledCode) {
         val main = CompiledFunction(code, Scope(null), rootNamespace, 0)
@@ -87,11 +93,13 @@ class Interpreter {
                 }
 
                 val obj = execStack.pop()
-                if (obj !is CaseObject || obj.type != type) {
+                if (obj.type != type) {
                     throw InterpreterException("Expected a ${type.name}, got ${obj.type.name}")
                 }
 
-                obj.data.reversed().forEach { execStack.push(it) }
+                if (obj is CaseObject) {
+                    obj.data.reversed().forEach { execStack.push(it) }
+                }
             }
         }
     }
@@ -115,11 +123,15 @@ class Interpreter {
                         o.type in type.cases
                                 && pattern.inners.size == 1
                                 && match(pattern.inners[0], o)
-                    is TypeCase ->
-                        o is CaseObject
-                                && o.type == type
-                                && pattern.inners.size == type.fieldCount
-                                && pattern.inners.zip(o.data).all { (p, d) -> match(p, d) }
+                    is TypeCase -> {
+                        when (o) {
+                            is SingletonObject -> o.type == type
+                            is CaseObject -> o.type == type
+                                    && pattern.inners.size == type.fieldCount
+                                    && pattern.inners.zip(o.data).all { (p, d) -> match(p, d) }
+                            else -> false
+                        }
+                    }
                     else -> false
                 }
             }
@@ -136,7 +148,7 @@ class Interpreter {
                 val args = List(opcode.nargs) { execStack.pop() }
                 execStack.push(PartialFunction(fn, args))
             }
-            else -> throw InterpreterException("Too many arguments given for function")
+            else -> throw InterpreterException("Too many arguments given for function $fn")
         }
     }
 

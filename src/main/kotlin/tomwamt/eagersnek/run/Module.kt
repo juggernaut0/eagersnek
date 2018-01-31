@@ -12,15 +12,24 @@ class Module(private val names: Namespace) {
 
         private val cache: MutableMap<String, Module> = mutableMapOf()
 
+        fun fromCode(src: String, predef: Boolean = true): Module {
+            val ast = ASTParser.parse(Scanner.scan(src))
+            val code = CodeGen.compile(ast)
+            val interpreter = Interpreter(predef)
+            interpreter.exec(code)
+            return Module(interpreter.rootNamespace)
+        }
+
         fun fromFile(filename: String): Module {
             return cache.computeIfAbsent(filename) {
                 val src = String(Files.readAllBytes(Paths.get(appDir, filename)))
-                val ast = ASTParser.parse(Scanner.scan(src))
-                val code = CodeGen.compile(ast)
-                val interpreter = Interpreter()
-                interpreter.exec(code)
-                Module(interpreter.rootNamespace)
+                fromCode(src)
             }
+        }
+
+        val predef: Module = cache.computeIfAbsent("predef") {
+            val reader = Module::class.java.getResourceAsStream("/predef.ess")?.reader() ?: throw InterpreterException("resource not found")
+            fromCode(reader.readText(), false)
         }
     }
 

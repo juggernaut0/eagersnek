@@ -1,8 +1,0 @@
-let range = { n ->
-	(unfold { state ->
-		(match (== state n) [
-			{ True -> None }
-			{ False -> (Pair n (+ n 1)) }
-		])
-	} 0)
-}

@@ -6,4 +6,6 @@ class StringMatch(val value: String) : MatchPattern
 object EmptyListMatch : MatchPattern
 object UnitMatch : MatchPattern
 object AlwaysMatch : MatchPattern
-class TypeMatch(val typename: List<String>, val inners: List<MatchPattern>) : MatchPattern
+class TypeMatch(val typename: List<String>, val inners: List<MatchPattern>) : MatchPattern {
+    override fun toString(): String = "TypeMatch<${typename.joinToString(".")}, ...>"
+}

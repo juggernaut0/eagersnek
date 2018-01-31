@@ -1,0 +1,25 @@
+type SeqT = Seq state headf tailf
+namespace Seq {
+	let head = { (Seq s hf tf) -> (hf s) }
+	let tail = { (Seq s hf tf) -> (Seq (tf s) hf tf) }
+
+	public let map = { (Function mapper) (Seq s hf tf) ->
+	    (Seq s (>> hf mapper) tf)
+    }
+
+	public let take = { n seq ->
+		(List.unfold { (T2 (Number i) (SeqT s)) ->
+			(if (eq 0 i)
+				{ -> None }
+				{ -> (Some (T2 (head s) (T2 (- i 1) (tail s)))) }
+			)
+		} (T2 n seq))
+	}
+}
+
+let fib = (Seq.map { (T2 x _) -> x }
+	(Seq (T2 1 1) ident { (T2 a b) -> (T2 b (+ a b)) })
+)
+
+let first10fib = (Seq.take 10 fib)
+(List.foreach println first10fib)

@@ -2,7 +2,23 @@ public let ident = { x -> x }
 public let >> = { f g x -> (g (f x)) }
 public let flip = { f a b -> (f b a) }
 
-type Option = Some x | None
+public let range = { n ->
+	(unfold { state ->
+		(match (eq state n) [
+			{ True -> None }
+			{ False -> (Pair n (+ n 1)) }
+		])
+	} 0)
+}
+
+public let if = { (Bool cond) (Function then) (Function else) ->
+	(match cond [
+		{ (True) -> (then) }
+		{ (False) -> (else) }
+	])
+}
+
+public type Option = Some x | None
 
 public namespace List {
     public let fold = { (Function folder) state (List list) ->
@@ -29,4 +45,17 @@ public namespace List {
             }
         ])
     }
+
+    public let unfold = { (Function unfolder) init ->
+    	(reverse
+    	    ({ state acc ->
+                (match (unfolder state) [
+                    { (None) -> acc }
+                    { (Some (T2 a b)) -> (. b (:: a acc)) }
+                ])
+            } init [])
+    	)
+    }
 }
+
+public type Tuple = T2 a b | T3 a b c | T4 a b c d
