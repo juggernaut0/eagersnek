@@ -3,7 +3,7 @@ package tomwamt.eagersnek.parse
 object ASTParser : Parser<AST>() {
     override fun parse(tokens: Seq<Token>): AST {
         val imports = tokens.imports()
-        val rootNamespace = imports.seq.decls(QualifiedName(emptyList()), true)
+        val rootNamespace = imports.seq.decls(QualifiedName(0, emptyList()), true)
         val call = rootNamespace.seq.callExpr()
 
         return AST(imports.result, rootNamespace.result, call?.result)
@@ -20,13 +20,14 @@ object ASTParser : Parser<AST>() {
     }
 
     private fun Seq<Token>.qualName(): SeqResult<QualifiedName>? {
+        val line = currentLine()
         return (expect(TokenType.IDENT) ?: return null)
                 .then {
                     star {
                         match(TokenType.SYMBOL, ".")?.expectOrThrow(TokenType.IDENT)
                     }
                 }
-                .map { (first, rest) -> QualifiedName(listOf(first, *rest.toTypedArray())) }
+                .map { (first, rest) -> QualifiedName(line, listOf(first, *rest.toTypedArray())) }
     }
 
     private fun Seq<Token>.decls(name: QualifiedName, public: Boolean): SeqResult<NamespaceDecl> {
@@ -139,33 +140,42 @@ object ASTParser : Parser<AST>() {
     }
 
     private fun Seq<Token>.callExpr(): SeqResult<CallExpr>? {
-        return match(TokenType.SYMBOL, "(")
-                ?.require("expr or .") { match(TokenType.SYMBOL, ".")?.let { SeqResult(DotExpr, it) } ?: expr() }
-                ?.then { star { expr() } }
-                ?.map { (callable, args) -> CallExpr(callable, args) }
-                ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
+        val line = currentLine()
+        return (match(TokenType.SYMBOL, "(") ?: return null)
+                .require("expr or .") { dotExpr() ?: expr() }
+                .then { star { expr() } }
+                .map { (callable, args) -> CallExpr(line, callable, args) }
+                .thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
+    }
+
+    private fun Seq<Token>.dotExpr(): SeqResult<DotExpr>? {
+        val line = currentLine()
+        return match(TokenType.SYMBOL, ".")?.let { SeqResult(DotExpr(line), it) }
     }
 
     private fun Seq<Token>.lambdaExpr(): SeqResult<LambdaExpr>? {
-        return match(TokenType.SYMBOL, "{")
-                ?.star { pattern() }
-                ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "->") }
-                ?.then { require("block") { block() } }
-                ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "}") }
-                ?.map { (patterns, block) -> LambdaExpr(patterns, block) }
+        val line = currentLine()
+        return (match(TokenType.SYMBOL, "{") ?: return null)
+                .star { pattern() }
+                .thenConsume { matchOrThrow(TokenType.SYMBOL, "->") }
+                .then { require("block") { block() } }
+                .thenConsume { matchOrThrow(TokenType.SYMBOL, "}") }
+                .map { (patterns, block) -> LambdaExpr(line, patterns, block) }
     }
 
     private fun Seq<Token>.listExpr(): SeqResult<ListExpr>? {
-        return match(TokenType.SYMBOL, "[")
-                ?.star { block() }
-                ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "]") }
-                ?.map { ListExpr(it) }
+        val line = currentLine()
+        return (match(TokenType.SYMBOL, "[") ?: return null)
+                .star { block() }
+                .thenConsume { matchOrThrow(TokenType.SYMBOL, "]") }
+                .map { ListExpr(line, it) }
     }
 
     private fun Seq<Token>.constLiteral(): SeqResult<ConstLiteral>? {
-        return expect(TokenType.NUMBER)?.map { ConstLiteral(ConstType.NUMBER, it) }
-                ?: expect(TokenType.STRING)?.map { ConstLiteral(ConstType.STRING, it) }
-                ?: match(TokenType.SYMBOL, "()")?.let { SeqResult(ConstLiteral(ConstType.UNIT, "()"), it) }
-                ?: match(TokenType.SYMBOL, "[]")?.let { SeqResult(ConstLiteral(ConstType.EMPTY_LIST, "[]"), it) }
+        val line = currentLine()
+        return expect(TokenType.NUMBER)?.map { ConstLiteral(line, ConstType.NUMBER, it) }
+                ?: expect(TokenType.STRING)?.map { ConstLiteral(line, ConstType.STRING, it) }
+                ?: match(TokenType.SYMBOL, "()")?.let { SeqResult(ConstLiteral(line, ConstType.UNIT, "()"), it) }
+                ?: match(TokenType.SYMBOL, "[]")?.let { SeqResult(ConstLiteral(line, ConstType.EMPTY_LIST, "[]"), it) }
     }
 }

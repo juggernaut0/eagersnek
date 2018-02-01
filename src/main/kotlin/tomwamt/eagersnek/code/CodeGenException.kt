@@ -1,3 +1,3 @@
 package tomwamt.eagersnek.code
 
-class CodeGenException(msg: String) : Exception(msg)
+class CodeGenException(msg: String, line: Int) : Exception("Line $line: $msg")

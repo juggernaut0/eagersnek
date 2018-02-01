@@ -166,8 +166,8 @@ object CodeGen {
             genMatch(callExpr, allowTail)
         } else {
             callExpr.args.reversed().forEach { gen(it, false) }
-            if (callExpr.callable == DotExpr) {
-                if (!allowTail) throw CodeGenException("Tail call not allowed here")
+            if (callExpr.callable is DotExpr) {
+                if (!allowTail) throw CodeGenException("Tail call not allowed here", callExpr.line)
                 add(TailCall(callExpr.args.size))
             } else {
                 gen(callExpr.callable, false)
@@ -185,15 +185,15 @@ object CodeGen {
     }
 
     private fun CompiledCode.genMatch(callExpr: CallExpr, allowTail: Boolean) {
-        if (callExpr.args.size != 2) throw CodeGenException("Incorrect number of args in match: ${callExpr.args.size}")
+        if (callExpr.args.size != 2) throw CodeGenException("Incorrect number of args in match: ${callExpr.args.size}", callExpr.line)
 
         gen(callExpr.args[0], false)
 
-        val cases = (callExpr.args[1] as? ListExpr ?: throw CodeGenException("match requires a list as second argument"))
+        val cases = (callExpr.args[1] as? ListExpr ?: throw CodeGenException("match requires a list as second argument", callExpr.args[1].line))
                 .elements
-                .map { it.expr as? LambdaExpr ?: throw CodeGenException("every case in a match must be a lambda") }
+                .map { it.expr as? LambdaExpr ?: throw CodeGenException("every case in a match must be a lambda", it.expr.line) }
 
-        cases.find { it.params.size != 1 }?.let { throw CodeGenException("every case in a match must have exactly one parameter") }
+        cases.find { it.params.size != 1 }?.let { throw CodeGenException("every case in a match must have exactly one parameter", it.line) }
 
         val labels = cases.map { Label(it.params[0].toString()) }
 

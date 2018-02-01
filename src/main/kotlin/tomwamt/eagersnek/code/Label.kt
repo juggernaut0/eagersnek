@@ -5,7 +5,7 @@ class Label(val display: String) {
     val target: Int get() = _target ?: throw RuntimeException("Unattached label")
 
     fun attach(target: Int) {
-        if (_target != null) throw CodeGenException("label $display already attached")
+        if (_target != null) throw CodeGenException("label $display already attached", 0)
         _target = target
     }
 

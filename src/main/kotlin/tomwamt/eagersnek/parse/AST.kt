@@ -28,15 +28,15 @@ class NamePattern(val value: String) : Pattern {
 class ListPattern(val inners: List<Pattern>) : Pattern
 class TypePattern(val name: QualifiedName, val params: List<Pattern>) : Pattern
 class Block(val bindings: List<Binding>, val expr: Expr)
-interface Expr
-class CallExpr(val callable: Expr, val args: List<Expr>) : Expr
-class LambdaExpr(val params: List<Pattern>, val block: Block) : Expr
-class ListExpr(val elements: List<Block>) : Expr
-class ConstLiteral(val type: ConstType, val value: String) : Expr {
+interface Expr { val line: Int }
+class CallExpr(override val line: Int, val callable: Expr, val args: List<Expr>) : Expr
+class LambdaExpr(override val line: Int, val params: List<Pattern>, val block: Block) : Expr
+class ListExpr(override val line: Int, val elements: List<Block>) : Expr
+class ConstLiteral(override val line: Int, val type: ConstType, val value: String) : Expr {
     override fun toString(): String = value
 }
 enum class ConstType { NUMBER, STRING, EMPTY_LIST, UNIT }
-class QualifiedName(val parts: List<String>) : Expr {
+class QualifiedName(override val line: Int, val parts: List<String>) : Expr {
     override fun toString(): String = parts.joinToString(".")
 }
-object DotExpr : Expr
+class DotExpr(override val line: Int) : Expr

@@ -48,6 +48,8 @@ abstract class Parser<out T> {
     }
 
     protected fun <T> parseError(expected: String, actual: Token): T {
-        throw ParseException("Expected $expected, got ${actual.type}(${actual.value}) at line ${actual.line}")
+        throw ParseException("Line ${actual.line}: Expected $expected, got ${actual.type}(${actual.value})")
     }
+
+    protected fun Seq<Token>.currentLine() = if (empty) 0 else head().line
 }
