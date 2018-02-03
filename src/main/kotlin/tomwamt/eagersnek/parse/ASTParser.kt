@@ -6,6 +6,11 @@ object ASTParser : Parser<AST>() {
         val rootNamespace = imports.seq.decls(QualifiedName(0, emptyList()), true)
         val call = rootNamespace.seq.callExpr()
 
+        val end = (call ?: rootNamespace).seq
+        if (!end.empty) {
+            parseError<Nothing>("<EOF>", end.head())
+        }
+
         return AST(imports.result, rootNamespace.result, call?.result)
     }
 

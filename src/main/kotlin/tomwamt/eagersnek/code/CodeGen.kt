@@ -129,6 +129,7 @@ object CodeGen {
     }
 
     private fun CompiledCode.gen(expr: Expr, allowTail: Boolean) {
+        currentLine = expr.line
         when (expr) {
             is ConstLiteral -> genConst(expr)
             is QualifiedName -> add(LoadName(expr.parts))

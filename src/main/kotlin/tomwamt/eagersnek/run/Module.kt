@@ -6,39 +6,39 @@ import tomwamt.eagersnek.parse.Scanner
 import java.nio.file.Files
 import java.nio.file.Paths
 
-class Module(private val names: Namespace) {
+class Module(val name: String, private val namespace: Namespace) {
     companion object {
         var appDir: String = "."
 
         private val cache: MutableMap<String, Module> = mutableMapOf()
 
-        fun fromCode(src: String, predef: Boolean = true): Module {
+        fun fromCode(src: String, name: String, predef: Boolean = true): Module {
             val ast = ASTParser.parse(Scanner.scan(src))
             val code = CodeGen.compile(ast)
-            val interpreter = Interpreter(predef)
+            val interpreter = Interpreter(name, predef)
             interpreter.exec(code)
-            return Module(interpreter.rootNamespace)
+            return Module(name, interpreter.rootNamespace)
         }
 
         fun fromFile(filename: String): Module {
             return cache.computeIfAbsent(filename) {
                 val src = String(Files.readAllBytes(Paths.get(appDir, filename)))
-                fromCode(src)
+                fromCode(src, filename)
             }
         }
 
         val predef: Module = cache.computeIfAbsent("predef") {
             val reader = Module::class.java.getResourceAsStream("/predef.ess")?.reader() ?: throw InterpreterException("resource not found")
-            fromCode(reader.readText(), false)
+            fromCode(reader.readText(), "predef", false)
         }
     }
 
     fun importInto(target: Namespace) {
-        import(names, target)
+        import(namespace, target)
     }
 
     fun importNameInto(qname: List<String>, target: Namespace) {
-        var src = names
+        var src = namespace
         var tgt = target
         for (name in qname.subList(0, qname.lastIndex)) {
             src = src.subnames[name] ?: throw InterpreterException("No namespace $name")

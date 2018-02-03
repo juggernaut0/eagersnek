@@ -2,7 +2,7 @@ package tomwamt.eagersnek.run
 
 import tomwamt.eagersnek.code.*
 
-class Interpreter(loadPredef: Boolean = true) {
+class Interpreter(private val modName: String, loadPredef: Boolean = true) {
     val callStack: Stack<CallFrame> = Stack()
     val execStack: Stack<RuntimeObject> = Stack()
     val rootNamespace = Builtin.makeRootNamespace()
@@ -14,20 +14,24 @@ class Interpreter(loadPredef: Boolean = true) {
     }
 
     fun exec(code: CompiledCode) {
-        val main = CompiledFunction(code, Scope(null), rootNamespace, 0)
+        val main = CompiledFunction(code, Scope(null), rootNamespace, 0, modName, 0)
         try {
             main.call(this)
         } catch (e: InterpreterException) {
-            println(callStack)
-            println(execStack)
-            throw e
+            System.err.println(e.message)
+            callStack.asList()
+                    .asReversed()
+                    .mapIndexed { i, frame -> "  ${if (i == 0) "  in" else "from"} ${frame.fn} at line ${frame.srcLine}" }
+                    .forEach { System.err.println(it) }
+            System.err.println(execStack)
         }
     }
 
-    internal fun run(code: List<OpCode>) {
+    internal fun run(code: CompiledCode) {
         var ip = 0
         while (ip < code.size) {
-            val opcode = code[ip]
+            val (srcLine, opcode) = code[ip]
+            callStack.peek().srcLine = srcLine
             ip += 1
             when (opcode) {
                 NoOp -> Unit
@@ -41,7 +45,7 @@ class Interpreter(loadPredef: Boolean = true) {
                 is LoadName -> execStack.push(findName(opcode.name))
                 is LoadNumber -> execStack.push(NumberObject(opcode.value))
                 is LoadString -> execStack.push(StringObject(opcode.value))
-                is LoadFunction -> execStack.push(CompiledFunction(opcode.code, callStack.peek().scope, rootNamespace, opcode.paramCount))
+                is LoadFunction -> execStack.push(CompiledFunction(opcode.code, callStack.peek().scope, rootNamespace, opcode.paramCount, modName, srcLine))
                 is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
                 is SaveNamespace -> rootNamespace.findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> call(opcode)
@@ -203,5 +207,7 @@ class Interpreter(loadPredef: Boolean = true) {
         override fun toString(): String {
             return store.toString()
         }
+
+        fun asList(): List<T> = store
     }
 }

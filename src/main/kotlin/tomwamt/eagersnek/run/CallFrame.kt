@@ -4,6 +4,8 @@ class CallFrame(val fn: CompiledFunction) {
     var scope: Scope = Scope(fn.baseScope)
         private set
 
+    var srcLine = 0
+
     fun pushScope() {
         scope = Scope(scope)
     }

@@ -1,7 +1,8 @@
 package tomwamt.eagersnek.code
 
-class CompiledCode : AbstractList<OpCode>() {
-    private val code: MutableList<OpCode> = ArrayList()
+class CompiledCode : AbstractList<SrcLineOpCode>() {
+    var currentLine: Int = 0
+    private val code: MutableList<SrcLineOpCode> = ArrayList()
 
     override val size: Int
         get() = code.size
@@ -9,7 +10,7 @@ class CompiledCode : AbstractList<OpCode>() {
     override fun get(index: Int) = code[index]
 
     fun add(opCode: OpCode) {
-        code.add(opCode)
+        code.add(SrcLineOpCode(currentLine, opCode))
     }
 
     fun addLabel(label: Label) {

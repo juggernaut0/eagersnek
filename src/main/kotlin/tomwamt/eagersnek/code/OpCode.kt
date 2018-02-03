@@ -28,3 +28,5 @@ class MkNamespace(val name: List<String>, val localName: String, val public: Boo
 class MkType(val name: String, val namespace: List<String>, val cases: List<TypeCase>) : OpCode
 class ImportAll(val filename: String) : OpCode
 class ImportNames(val filename: String, val names: List<List<String>>) : OpCode
+
+data class SrcLineOpCode(val srcLine: Int, val opCode: OpCode)
