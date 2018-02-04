@@ -1,0 +1,7 @@
+let n = (to_num (input "Enter a number: "))
+
+(pipe n [
+  List.range
+  (List.map (* 2))
+  (List.foreach println)
+])

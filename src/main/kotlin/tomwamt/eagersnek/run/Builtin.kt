@@ -31,8 +31,6 @@ object Builtin {
                 println(stringify(obj))
                 int.execStack.push(CaseObject(Unit, emptyList()))
             }
-
-
         }
 
         ns.bindings["input"] = object : FunctionObject(1) {
@@ -65,6 +63,19 @@ object Builtin {
                     o1 is StringObject && o2 is StringObject -> o1.value == o2.value
                     o1 is CaseObject && o2 is CaseObject -> o1.data.zip(o2.data).all { (d1, d2) -> eq(d1, d2) }
                     else -> false
+                }
+            }
+        }
+
+        ns.bindings["to_num"] = object : FunctionObject(1) {
+            override fun call(int: Interpreter) {
+                val str = int.execStack.pop()
+                        .let { it as? StringObject ?: throw InterpreterException("Expected a String, got ${it.type.name}") }
+
+                try {
+                    int.execStack.push(NumberObject(str.value.toDouble()))
+                } catch (e: NumberFormatException) {
+                    throw InterpreterException("Can't parse number ${e.message ?: ""}")
                 }
             }
         }
