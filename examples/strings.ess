@@ -1,0 +1,2 @@
+let what_this_is = "Sparta!"
+(println (String.join " " ["This" "is" what_this_is]))

@@ -13,6 +13,8 @@ public let if = { (Bool cond) (Function then) (Function else) ->
 
 public type Option = Some x | None
 
+public type Tuple = T2 a b | T3 a b c | T4 a b c d
+
 public namespace List {
   public let fold = { (Function folder) state (List list) ->
     (match list [
@@ -60,4 +62,17 @@ public namespace List {
   }
 }
 
-public type Tuple = T2 a b | T3 a b c | T4 a b c d
+public namespace String {
+  public let join = { (String sep) (List strs) ->
+    (match strs [
+      { [] -> "" }
+      { (:: h t) ->
+        (List.fold
+          { s e -> (String.concat (String.concat s sep) e) }
+          h
+          t
+        )
+      }
+    ])
+  }
+}
