@@ -1,0 +1,1 @@
+(println (List.fold + 0 (List.range 1000000)))
