@@ -23,7 +23,6 @@ class Interpreter(private val modName: String, loadPredef: Boolean = true) {
                     .asReversed()
                     .mapIndexed { i, frame -> "  ${if (i == 0) "  in" else "from"} ${frame.fn} at line ${frame.srcLine}" }
                     .forEach { System.err.println(it) }
-            System.err.println(execStack)
         }
     }
 
@@ -209,5 +208,7 @@ class Interpreter(private val modName: String, loadPredef: Boolean = true) {
         }
 
         fun asList(): List<T> = store
+
+        fun clear() = store.clear()
     }
 }

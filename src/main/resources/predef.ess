@@ -1,3 +1,4 @@
+public let id = { x -> x }
 public let apply = { f x -> (f x) }
 public let ident = { x -> x }
 public let >> = { f g x -> (g (f x)) }

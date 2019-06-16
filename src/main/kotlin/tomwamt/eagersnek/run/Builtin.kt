@@ -135,7 +135,7 @@ object Builtin {
         }
     }
 
-    private fun stringify(obj: RuntimeObject): String {
+    fun stringify(obj: RuntimeObject): String {
         return when (obj) {
             is NumberObject -> if (obj.value.isInt()) obj.value.toInt().toString() else obj.value.toString()
             is StringObject -> obj.value
