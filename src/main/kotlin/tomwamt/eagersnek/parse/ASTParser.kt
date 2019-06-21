@@ -100,30 +100,34 @@ object ASTParser : Parser<AST>() {
     }
 
     private fun Seq<Token>.pattern(): SeqResult<Pattern>? {
-        return match(TokenType.IDENT, "_")?.let { SeqResult(WildcardPattern(), it) }
-                ?: expect(TokenType.IDENT)?.map { NamePattern(it) }
+        val line = currentLine()
+        return match(TokenType.IDENT, "_")?.let { SeqResult(WildcardPattern(line), it) }
+                ?: expect(TokenType.IDENT)?.map { NamePattern(line, it) }
                 ?: listPattern()
                 ?: typePattern()
                 ?: constPattern()
     }
 
     private fun Seq<Token>.listPattern(): SeqResult<ListPattern>? {
+        val line = currentLine()
         return match(TokenType.SYMBOL, "[")
                 ?.star { pattern() }
-                ?.map { ListPattern(it) }
+                ?.map { ListPattern(line, it) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, "]") }
     }
 
     private fun Seq<Token>.typePattern(): SeqResult<TypePattern>? {
+        val line = currentLine()
         return match(TokenType.SYMBOL, "(")
                 ?.require("qualified name") { qualName() }
                 ?.then { star { pattern() } }
-                ?.map { (name, params) -> TypePattern(name, params) }
+                ?.map { (name, params) -> TypePattern(line, name, params) }
                 ?.thenConsume { matchOrThrow(TokenType.SYMBOL, ")") }
     }
 
     private fun Seq<Token>.constPattern(): SeqResult<ConstPattern>? {
-        return constLiteral()?.map { ConstPattern(it) }
+        val line = currentLine()
+        return constLiteral()?.map { ConstPattern(line, it) }
     }
 
     private fun Seq<Token>.block(): SeqResult<Block>? {

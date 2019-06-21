@@ -1,0 +1,11 @@
+let a = "global"
+let _ = (println a)
+let main = { ->
+  let f = { -> (println a) }
+  let _ = (f) # this should error with "a used before definition" instead of printing "global"
+  let a = "local"
+  let _ = (f)
+  f
+}
+let closed? = (main)
+(closed?)

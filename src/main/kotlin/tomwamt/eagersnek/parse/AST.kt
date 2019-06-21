@@ -4,6 +4,7 @@ class AST(val imports: List<ImportStmt>, val rootNamespace: NamespaceDecl, val e
 class ImportStmt(val filename: String, val names: List<QualifiedName>) {
     override fun toString() = "import ... from '$filename'"
 }
+
 interface Decl
 class NamespaceDecl(val name: QualifiedName, val public: Boolean, val decls: List<Decl>) : Decl
 class TypeDecl(val name: QualifiedName, val public: Boolean, val cases: List<TypeCase>, val namespace: NamespaceDecl?) : Decl {
@@ -15,18 +16,20 @@ class TypeCase(val name: String, val params: List<String>) {
 class Binding(val pattern: Pattern, val block: Block, val public: Boolean) : Decl {
     override fun toString() = "let $pattern = ..."
 }
-interface Pattern
-class ConstPattern(val const: ConstLiteral) : Pattern {
+
+interface Pattern { val line: Int }
+class ConstPattern(override val line: Int, val const: ConstLiteral) : Pattern {
     override fun toString(): String = const.toString()
 }
-class WildcardPattern : Pattern {
+class WildcardPattern(override val line: Int) : Pattern {
     override fun toString(): String = "_"
 }
-class NamePattern(val value: String) : Pattern {
+class NamePattern(override val line: Int, val value: String) : Pattern {
     override fun toString(): String = value
 }
-class ListPattern(val inners: List<Pattern>) : Pattern
-class TypePattern(val name: QualifiedName, val params: List<Pattern>) : Pattern
+class ListPattern(override val line: Int, val inners: List<Pattern>) : Pattern
+class TypePattern(override val line: Int, val name: QualifiedName, val params: List<Pattern>) : Pattern
+
 class Block(val bindings: List<Binding>, val expr: Expr)
 interface Expr { val line: Int }
 class CallExpr(override val line: Int, val callable: Expr, val args: List<Expr>) : Expr

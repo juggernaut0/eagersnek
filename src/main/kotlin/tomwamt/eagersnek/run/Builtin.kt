@@ -49,6 +49,9 @@ object Builtin {
         ns.bindings["*"] = BinaryOp { n1, n2 -> n1 * n2 }
         ns.bindings["/"] = BinaryOp { n1, n2 -> n1 / n2 }
 
+        ns.bindings["&"] = BoolOp(trueObj, falseObj) { b1, b2 -> b1 && b2 }
+        ns.bindings["|"] = BoolOp(trueObj, falseObj) { b1, b2 -> b1 || b2 }
+
         ns.bindings["eq"] = object : FunctionObject(2) {
             override fun call(int: Interpreter) {
                 val o1 = int.execStack.pop()
@@ -132,6 +135,27 @@ object Builtin {
             val n2 = int.popNumber()
 
             int.execStack.push(NumberObject(op(n1, n2)))
+        }
+    }
+
+    private class BoolOp(private val trueObj: RuntimeObject, private val falseObj: RuntimeObject, private val op: (Boolean, Boolean) -> Boolean) : FunctionObject(2) {
+        override fun call(int: Interpreter) {
+            val b1 = int.popBool()
+            val b2 = int.popBool()
+
+            int.pushBool(op(b1, b2))
+        }
+
+        private fun Interpreter.popBool(): Boolean {
+            return when (val o = execStack.pop()) {
+                trueObj -> true
+                falseObj -> false
+                else -> throw InterpreterException("Expected a boolean, got ${o.type}")
+            }
+        }
+
+        private fun Interpreter.pushBool(b: Boolean) {
+            execStack.push(if (b) trueObj else falseObj)
         }
     }
 

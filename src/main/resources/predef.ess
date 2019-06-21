@@ -61,6 +61,18 @@ public namespace List {
       )
     } 0)
   }
+
+  public let find = { (Function pred) (List list) ->
+    (match list [
+      { [] -> None }
+      { (:: h t) ->
+        (match (pred h) [
+          { (True) -> (Some h) }
+          { (False) -> (. pred t) }
+        ])
+      }
+    ])
+  }
 }
 
 public namespace String {
@@ -75,5 +87,9 @@ public namespace String {
         )
       }
     ])
+  }
+
+  public let chars = { (String s) ->
+    (List.map { it -> (String.char_at it s) } (List.range (String.length s)))
   }
 }

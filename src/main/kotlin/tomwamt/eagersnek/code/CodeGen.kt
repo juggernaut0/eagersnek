@@ -2,12 +2,20 @@ package tomwamt.eagersnek.code
 
 import tomwamt.eagersnek.parse.*
 
-object CodeGen {
-    private val emptyListName = listOf("Empty")
-    private val listConsName = listOf("::")
-    private val unitName = listOf("Unit")
+class CodeGen private constructor(private val ast: AST){
+    companion object {
+        private val emptyListName = listOf("Empty")
+        private val listConsName = listOf("::")
+        private val unitName = listOf("Unit")
 
-    fun compile(ast: AST): CompiledCode {
+        fun compile(ast: AST): CompiledCode {
+            return CodeGen(ast).generate()
+        }
+    }
+
+    private val bindings: ResolvedBindings = Resolver.resolve(ast)
+
+    private fun generate(): CompiledCode {
         val code = CompiledCode()
 
         ast.imports.forEach { code.genImport(it) }
@@ -29,14 +37,9 @@ object CodeGen {
         val name = parent + namespace.name.parts
         if (name.isNotEmpty()) {
             add(MkNamespace(name, namespace.name.parts[0], namespace.public))
-            add(PushScope)
         }
 
         namespace.decls.forEach { genDecl(it, name) }
-
-        if (name.isNotEmpty()) {
-            add(PopScope)
-        }
     }
 
     private fun CompiledCode.genDecl(decl: Decl, parent: List<String>) {
@@ -60,16 +63,12 @@ object CodeGen {
 
     private fun CompiledCode.gen(block: Block, allowTail: Boolean) {
         if (block.bindings.isNotEmpty()) {
-            add(PushScope)
             for (b in block.bindings) {
                 gen(b.block, false)
                 savePattern(b.pattern, null)
             }
         }
         gen(block.expr, allowTail)
-        if (block.bindings.isNotEmpty()) {
-            add(PopScope)
-        }
     }
 
     // a value is on the stack -- save it or decompose it
@@ -110,7 +109,8 @@ object CodeGen {
             add(Duplicate)
             add(SaveNamespace(pattern.value, namespace))
         }
-        add(SaveLocal(pattern.value))
+        val decl = bindings.declarations[pattern] ?: throw CodeGenException("Unknown declaration: ${pattern.value}", pattern.line)
+        add(SaveLocal(decl))
     }
 
     private fun CompiledCode.saveList(pattern: ListPattern, namespace: List<String>?) {
@@ -132,7 +132,7 @@ object CodeGen {
         currentLine = expr.line
         when (expr) {
             is ConstLiteral -> genConst(expr)
-            is QualifiedName -> add(LoadName(expr.parts))
+            is QualifiedName -> genName(expr)
             is ListExpr -> genList(expr)
             is CallExpr -> genCall(expr, allowTail)
             is LambdaExpr -> genLambda(expr)
@@ -151,6 +151,15 @@ object CodeGen {
 
     private fun String.trimQuotes(): String {
         return substring(1, lastIndex)
+    }
+
+    private fun CompiledCode.genName(qname: QualifiedName) {
+        val decl = bindings.usages[qname]
+        if (decl == null) {
+            add(LoadName(qname.parts))
+        } else {
+            add(LoadLocal(decl))
+        }
     }
 
     private fun CompiledCode.genList(listExpr: ListExpr) {

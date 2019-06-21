@@ -1,0 +1,34 @@
+# check if char c is in string s
+let contains = { (String c) (String s) ->
+  (eq (List.find (eq c) (String.chars s)) (Some c))
+}
+
+let is_in = (flip contains)
+
+let is_digit = (is_in "0123456789")
+
+let all = { (Function pred) (List list) ->
+  (List.fold { s e -> (& s (pred e)) } True list)
+}
+
+let is_number = (>> String.chars (all is_digit))
+
+let try_parse_int = { (String s) ->
+  (match (is_number s) [
+    { (True) -> (Some (to_num s)) }
+    { (False) -> None }
+  ])
+}
+
+let main = { ->
+  let inp = (input "Input a number: ")
+  (match (String.length inp) [
+    { 0 -> () }
+    { _ ->
+      let _ = (println (try_parse_int inp))
+      (.)
+    }
+  ])
+}
+
+(main)

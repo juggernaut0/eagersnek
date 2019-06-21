@@ -1,10 +1,12 @@
 package tomwamt.eagersnek.run
 
-class Scope(val parent: Scope?) {
-    private val bindings: MutableMap<String, RuntimeObject> = mutableMapOf()
+import tomwamt.eagersnek.code.Declaration
 
-    fun find(name: String): RuntimeObject? = bindings[name] ?: parent?.find(name)
-    fun save(name: String, obj: RuntimeObject) {
+class Scope(val parent: Scope?) {
+    private val bindings: MutableMap<Declaration, RuntimeObject> = mutableMapOf()
+
+    fun find(name: Declaration): RuntimeObject? = bindings[name] ?: parent?.find(name)
+    fun save(name: Declaration, obj: RuntimeObject) {
         bindings[name] = obj
     }
 }

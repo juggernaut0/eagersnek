@@ -41,19 +41,18 @@ class Interpreter(private val modName: String, loadPredef: Boolean = true) {
                 is Jump -> ip = opcode.label.target
                 is Match -> if (!match(opcode.pattern)) throw InterpreterException("Failed match")
                 is JumpIfMatch -> if (match(opcode.pattern)) ip = opcode.label.target
+                is LoadLocal -> execStack.push(findDeclaration(opcode.declaration))
                 is LoadName -> execStack.push(findName(opcode.name))
                 is LoadNumber -> execStack.push(NumberObject(opcode.value))
                 is LoadString -> execStack.push(StringObject(opcode.value))
                 is LoadFunction -> execStack.push(CompiledFunction(opcode.code, callStack.peek().scope, rootNamespace, opcode.paramCount, modName, srcLine))
-                is SaveLocal -> callStack.peek().scope.save(opcode.name, execStack.pop())
+                is SaveLocal -> callStack.peek().scope.save(opcode.declaration, execStack.pop())
                 is SaveNamespace -> rootNamespace.findNamespace(opcode.namespace).bindings[opcode.name] = execStack.pop()
                 is Call -> call(opcode)
                 is TailCall -> {
                     tailCall(opcode)
                     ip = 0
                 }
-                PushScope -> callStack.peek().pushScope()
-                PopScope -> callStack.peek().popScope()
                 is MkNamespace -> makeNamespace(opcode.name, opcode.public)
                 is MkType -> makeType(opcode)
                 is ImportAll -> Module.fromFile(opcode.filename).importInto(rootNamespace)
@@ -183,13 +182,14 @@ class Interpreter(private val modName: String, loadPredef: Boolean = true) {
     }
 
     private fun findName(qname: List<String>): RuntimeObject {
-        val topFrame = callStack.peek()
+        return callStack.peek().fn.baseNs.findName(qname)
+    }
 
-        if (qname.size == 1) {
-            topFrame.scope.find(qname[0])?.let { return it }
+    private fun findDeclaration(declaration: Declaration): RuntimeObject {
+        return callStack.peek().let {
+            it.scope.find(declaration)
+                    ?: throw InterpreterException("Access of name '${declaration.name}' before assignment")
         }
-
-        return topFrame.fn.baseNs.findName(qname)
     }
 
     private fun findType(qname: List<String>): Type {
