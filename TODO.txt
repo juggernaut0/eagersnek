@@ -1,4 +1,3 @@
-* Automated test cases
 * Methods (dynamic dispatch)
 * infix math operators and overloading based on methods
 * Better error reporting in parser & code-gen

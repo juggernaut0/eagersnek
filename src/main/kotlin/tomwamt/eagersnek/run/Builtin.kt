@@ -30,7 +30,7 @@ object Builtin {
         ns.bindings["println"] = object : FunctionObject(1) {
             override fun call(int: Interpreter) {
                 val obj = int.execStack.pop()
-                println(stringify(obj))
+                int.io.out(stringify(obj))
                 int.execStack.push(CaseObject(Unit, emptyList()))
             }
         }
@@ -38,8 +38,8 @@ object Builtin {
         ns.bindings["input"] = object : FunctionObject(1) {
             override fun call(int: Interpreter) {
                 val prompt = int.execStack.pop()
-                print(stringify(prompt))
-                val inp = readLine()!!
+                int.io.out(stringify(prompt))
+                val inp = int.io.inp()!!
                 int.execStack.push(StringObject(inp))
             }
         }

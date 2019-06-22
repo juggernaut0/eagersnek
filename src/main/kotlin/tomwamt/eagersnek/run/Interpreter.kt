@@ -2,7 +2,7 @@ package tomwamt.eagersnek.run
 
 import tomwamt.eagersnek.code.*
 
-class Interpreter(private val modName: String, loadPredef: Boolean = true) {
+class Interpreter(private val modName: String, loadPredef: Boolean = true, val io: IOProvider = SystemIOProvider) {
     val callStack: Stack<CallFrame> = Stack()
     val execStack: Stack<RuntimeObject> = Stack()
     val rootNamespace = Builtin.makeRootNamespace()
@@ -18,11 +18,11 @@ class Interpreter(private val modName: String, loadPredef: Boolean = true) {
         try {
             main.call(this)
         } catch (e: InterpreterException) {
-            System.err.println(e.message)
+            io.err(e.message.toString())
             callStack.asList()
                     .asReversed()
                     .mapIndexed { i, frame -> "  ${if (i == 0) "  in" else "from"} ${frame.fn} at line ${frame.srcLine}" }
-                    .forEach { System.err.println(it) }
+                    .forEach { io.err(it) }
         }
     }
 
